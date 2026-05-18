@@ -1,0 +1,54 @@
+run_name: smoke
+output_dir: runs/smoke
+seed: 1337
+tokenizer_name: gpt2
+
+dataset:
+  name: HuggingFaceFW/fineweb-edu
+  config_name: sample-10BT
+  split: train
+  streaming: true
+  text_column: text
+  min_chars: 200
+  max_chars: 20000
+  min_score:
+  min_int_score: 3
+  append_eos: true
+  shuffle_buffer: 1000
+  max_docs:
+  local_text_path:
+
+model:
+  block_size: 128
+  hidden_size: 128
+  intermediate_size: 352
+  num_hidden_layers: 2
+  num_attention_heads: 4
+  num_key_value_heads: 4
+  rope_theta: 10000.0
+  rms_norm_eps: 0.000001
+  attention_dropout: 0.0
+  tie_word_embeddings: false
+  vocab_multiple: 64
+  attn_implementation: sdpa
+
+trainer:
+  micro_batch_size: 2
+  gradient_accumulation_steps: 1
+  max_steps: 5
+  warmup_steps: 2
+  learning_rate: 0.0006
+  min_lr_ratio: 0.1
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: float32
+  compile: false
+  gradient_checkpointing: false
+  log_interval: 1
+  eval_interval: 5
+  eval_batches: 2
+  save_interval: 5
+  keep_last_checkpoints: 2
+  num_workers: 0

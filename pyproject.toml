@@ -1,0 +1,25 @@
+[project]
+name = "l20-pretrain"
+version = "0.1.0"
+description = "Single-GPU Llama-style pretraining lab tuned for an NVIDIA L20 48GB GPU."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "datasets>=2.19",
+  "numpy>=1.26",
+  "pyyaml>=6.0",
+  "safetensors>=0.4",
+  "tokenizers>=0.19",
+  "torch>=2.3",
+  "tqdm>=4.66",
+  "transformers>=4.45,<5",
+]
+
+[project.scripts]
+l20-pretrain = "l20_pretrain.train:main"
+l20-generate = "l20_pretrain.generate:main"
+l20-eval-ppl = "l20_pretrain.eval_ppl:main"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,54 @@
+run_name: l20-edu-140m-wide-baseline
+output_dir: runs/l20-edu-140m-wide-baseline
+seed: 1337
+tokenizer_name: HuggingFaceTB/SmolLM2-135M
+
+dataset:
+  name: HuggingFaceFW/fineweb-edu
+  config_name: sample-10BT
+  split: train
+  streaming: true
+  text_column: text
+  min_chars: 300
+  max_chars: 50000
+  min_score: 3.0
+  min_int_score: 3
+  append_eos: true
+  shuffle_buffer: 10000
+  max_docs:
+  local_text_path:
+
+model:
+  block_size: 2048
+  hidden_size: 768
+  intermediate_size: 3072
+  num_hidden_layers: 12
+  num_attention_heads: 12
+  num_key_value_heads: 4
+  rope_theta: 10000.0
+  rms_norm_eps: 0.000001
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+
+trainer:
+  micro_batch_size: 8
+  gradient_accumulation_steps: 32
+  max_steps: 19074
+  warmup_steps: 1000
+  learning_rate: 0.0003
+  min_lr_ratio: 0.1
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: true
+  gradient_checkpointing: false
+  log_interval: 10
+  eval_interval: 500
+  eval_batches: 64
+  save_interval: 1000
+  keep_last_checkpoints: 2
+  num_workers: 0

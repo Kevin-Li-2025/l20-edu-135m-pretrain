@@ -1,0 +1,59 @@
+lane:
+  claim: controlled-100m-150m-base
+  parameter_min_m: 100
+  parameter_max_m: 150
+  model_type: base-causal-lm
+
+candidate:
+  name: l20-edu-135m-deepthin
+  config: configs/l20_135m_deepthin.yaml
+  checkpoint: runs/l20-edu-135m-deepthin/final
+  eval_dir: eval_results/l20-edu-135m-deepthin
+
+controlled_baseline:
+  name: l20-edu-140m-wide-baseline
+  config: configs/l20_wide_140m_baseline.yaml
+  checkpoint: runs/l20-edu-140m-wide-baseline/final
+  eval_dir: eval_results/l20-edu-140m-wide-baseline
+
+public_baselines:
+  - name: gpt2-small
+    model: openai-community/gpt2
+    eval_dir: eval_results/gpt2-small
+  - name: opt-125m
+    model: facebook/opt-125m
+    eval_dir: eval_results/opt-125m
+  - name: gpt-neo-125m
+    model: EleutherAI/gpt-neo-125m
+    eval_dir: eval_results/gpt-neo-125m
+  - name: cerebras-gpt-111m
+    model: cerebras/Cerebras-GPT-111M
+    eval_dir: eval_results/cerebras-gpt-111m
+  - name: pythia-160m
+    model: EleutherAI/pythia-160m
+    eval_dir: eval_results/pythia-160m
+  - name: smollm-135m
+    model: HuggingFaceTB/SmolLM-135M
+    eval_dir: eval_results/smollm-135m
+  - name: smollm2-135m
+    model: HuggingFaceTB/SmolLM2-135M
+    eval_dir: eval_results/smollm2-135m
+
+eval:
+  harness: EleutherAI/lm-evaluation-harness
+  tasks:
+    - lambada_openai
+    - hellaswag
+    - piqa
+    - arc_easy
+    - arc_challenge
+    - winogrande
+  dtype: bfloat16
+  batch_size: auto
+  device: cuda:0
+
+gate:
+  require_controlled_win_rate: 0.67
+  require_public_win_rate: 0.50
+  require_contamination_status: pass
+  token_budget_tolerance: 0.005
