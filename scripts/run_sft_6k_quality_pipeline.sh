@@ -24,7 +24,7 @@ while true; do
   if [[ "${used_mb}" =~ ^[0-9]+$ && "${used_mb}" -le "${MAX_GPU_USED_MB}" ]]; then
     break
   fi
-  printf '{"event":"wait_gpu","memory_used_mb":%s,"max_gpu_used_mb":%s}\\n' "${used_mb:-0}" "${MAX_GPU_USED_MB}"
+  printf '{"event":"wait_gpu","memory_used_mb":%s,"max_gpu_used_mb":%s}\n' "${used_mb:-0}" "${MAX_GPU_USED_MB}"
   sleep "${CHECK_INTERVAL_SECONDS}"
 done
 
