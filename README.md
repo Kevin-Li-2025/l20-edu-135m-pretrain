@@ -42,7 +42,28 @@ Pythia-160M on 6/6. It does not beat SmolLM-135M or SmolLM2-135M, which were
 trained with much larger token budgets.
 
 See [docs/evaluation_report.md](docs/evaluation_report.md) for the full
-comparison table and training-token context.
+comparison table, benchmark protocol, contamination status, and training-token
+context. See [docs/training_recipe.md](docs/training_recipe.md) for the exact
+training recipe.
+
+## Benchmark Rigor
+
+The public baseline comparison uses the same EleutherAI `lm-evaluation-harness`
+version (`0.4.12`), task list, zero-shot setting, `bfloat16` dtype, `cuda:0`
+device, auto batch policy, full task datasets, logged samples, and comparison
+parser for both candidate and baselines. Baseline numbers are self-run through
+`scripts/eval_public_baselines.sh`; they are not copied from public leaderboards.
+
+The comparison is still not fully controlled: public baselines use their own
+released tokenizers and model context configs. A strict architecture claim
+requires the controlled baseline in `configs/l20_wide_140m_baseline.yaml`,
+trained with the same tokenizer, FineWeb-Edu slice, context length, optimizer,
+schedule, and token budget.
+
+No full contamination pass is claimed for this release. The repository includes
+`scripts/check_contamination.py` and `scripts/sample_training_text.py`, but a
+separate audit against the benchmark samples is still needed before making a
+strong no-contamination statement.
 
 ## Training Curves
 
@@ -59,6 +80,9 @@ with a compact summary in [docs/training_summary.json](docs/training_summary.jso
 - End-to-end base model pretraining from random initialization.
 - Streaming data ingestion and token packing for FineWeb-Edu.
 - Checkpointing, resume, generation, validation perplexity, and public eval.
+- A documented training recipe: batch size, global batch, sequence length,
+  optimizer, LR schedule, warmup, weight decay, gradient accumulation,
+  checkpoint cadence, runtime estimate, and known run issues.
 - A practical single-GPU recipe for 100M-class models.
 - Clear release hygiene: model card, training budget disclosure, baseline
   context, and limitation statements.

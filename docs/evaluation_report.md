@@ -31,6 +31,48 @@ The final checkpoint was evaluated with EleutherAI `lm-evaluation-harness` on a
 small-model base-LM suite. All public baselines were run through the same task
 set and comparison script.
 
+## Benchmark Protocol
+
+| Field | Setting |
+| --- | --- |
+| Harness | EleutherAI `lm-evaluation-harness` |
+| Harness version | `0.4.12` |
+| Model backend | `--model hf` |
+| Device | `cuda:0` |
+| Dtype | `bfloat16` |
+| Batch size | `auto`, resolved to 64 |
+| Few-shot setting | `num_fewshot=None` / zero-shot |
+| Limit | none, full task datasets |
+| Samples | `--log_samples` enabled |
+| Random seeds | harness defaults logged as Python 0, NumPy 1234, Torch 1234, few-shot 1234 |
+| Candidate numbers | self-run on final checkpoint |
+| Baseline numbers | self-run locally through `scripts/eval_public_baselines.sh`, not copied from public leaderboards |
+
+Candidate and baseline evaluations used the same harness version, task list,
+dtype, device class, batch policy, and comparison parser. They did **not** use
+the same tokenizer or training context length because public pretrained models
+are evaluated with their own released tokenizers and model configs. That means
+this is a public-model benchmark comparison, not a controlled tokenizer-matched
+architecture comparison.
+
+The eval command template was:
+
+```bash
+lm_eval \
+  --model hf \
+  --model_args "pretrained=<model-or-checkpoint>,dtype=bfloat16" \
+  --tasks lambada_openai,hellaswag,piqa,arc_easy,arc_challenge,winogrande \
+  --device cuda:0 \
+  --batch_size auto \
+  --output_path <output-dir> \
+  --log_samples
+```
+
+Context-length handling was left to the Hugging Face model configuration used by
+`lm-evaluation-harness`. The selected tasks are short enough that this should not
+be the dominant factor, but it is still a difference from a strictly controlled
+same-tokenizer/same-context experiment.
+
 | Task | Metric | l20-edu-135m | gpt2-small | opt-125m | gpt-neo-125m | cerebras-gpt-111m | pythia-160m | smollm-135m | smollm2-135m |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | ARC-Challenge | acc_norm | 0.2765 | 0.2261 | 0.2210 | 0.2321 | 0.2099 | 0.2312 | 0.2875 | 0.2969 |
@@ -77,6 +119,33 @@ The strongest honest reading is:
 The model should not be described as SOTA. A controlled architecture claim still
 requires training `configs/l20_wide_140m_baseline.yaml` under the same tokenizer,
 data, optimizer, schedule, and token budget.
+
+## Contamination Status
+
+No contamination pass is claimed for this release.
+
+The repository includes a simple n-gram contamination checker
+(`scripts/check_contamination.py`) and a training-text sampler
+(`scripts/sample_training_text.py`), but a full contamination audit against
+ARC, HellaSwag, PIQA, LAMBADA, and WinoGrande was not completed before release.
+Because the model was trained on a public web-scale FineWeb-Edu slice, benchmark
+overlap cannot be ruled out without a separate audit.
+
+For a stricter release, run:
+
+```bash
+python scripts/sample_training_text.py configs/l20_135m_deepthin.yaml \
+  --docs 100000 \
+  --out data/train_sample.txt
+
+python scripts/check_contamination.py \
+  --train data/train_sample.txt \
+  --benchmark eval_results/l20-edu-135m-deepthin-final \
+  --ngram 13 \
+  --out eval_results/contamination_report.json
+```
+
+That still remains a sample-based n-gram check, not a proof of no contamination.
 
 ## Interpretation
 

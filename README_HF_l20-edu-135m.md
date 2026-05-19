@@ -43,6 +43,59 @@ continued pretraining, and downstream supervised fine-tuning.
 | Final checkpoint | step 18,928 |
 | Hardware | single NVIDIA L20 GPU |
 
+## Training Recipe
+
+| Field | Value |
+| --- | --- |
+| Sequence length | 2048 tokens |
+| Micro batch size | 6 sequences |
+| Gradient accumulation | 43 steps |
+| Global batch size | 258 sequences |
+| Tokens / optimizer step | 528,384 |
+| Max steps | 18,928 |
+| Optimizer | AdamW |
+| Peak learning rate | `4e-4` |
+| LR schedule | linear warmup + cosine decay to `0.1 * peak_lr` |
+| Warmup | 1,000 steps |
+| Weight decay | 0.1 |
+| Adam beta1 / beta2 | 0.9 / 0.95 |
+| Gradient clipping | 1.0 |
+| Precision | bfloat16 |
+| Gradient checkpointing | enabled |
+| Torch compile | enabled |
+| Eval interval | 500 steps |
+| Checkpoint interval | 1,000 steps, keeping the last 2 regular checkpoints |
+
+The training config is included in the repository as
+`configs/l20_135m_deepthin.yaml`. A fuller recipe is available in
+`docs/training_recipe.md`.
+
+## Runtime And Cost Notes
+
+| Field | Value |
+| --- | --- |
+| GPU | NVIDIA L20 |
+| Reported GPU memory | 46,068 MiB total |
+| Mean logged throughput | 38,541 tokens/s |
+| Mean logged throughput after step 1,000 | 38,587 tokens/s |
+| Estimated training time | about 72 GPU-hours |
+| Final checkpoint mtime | 2026-05-19 05:04:22 +0800 |
+
+Exact peak VRAM and billing cost were not logged. A reproducible cost estimate
+is `72 GPU-hours * L20_hourly_rate`, excluding storage, network egress, idle
+time, and engineering time.
+
+Known run issues:
+
+- Transient dataset mirror read timeouts occurred near the end of training and
+  recovered through retry.
+- The final perplexity command printed `loss=2.8731 perplexity=17.69`, then hit
+  a Python finalization crash. The metric is reported because it was printed
+  before process teardown.
+- The training process printed `terminate called without an active exception`
+  after the final checkpoint had been written. The final checkpoint was
+  load-tested with `AutoModelForCausalLM`.
+
 ## Usage
 
 ```python
@@ -96,6 +149,32 @@ Zero-shot `lm-eval` results for the final checkpoint:
 | PIQA | acc_norm | 0.6224 |
 | WinoGrande | acc | 0.5099 |
 
+### Benchmark Protocol
+
+Candidate and public baseline numbers were run with the same evaluation setup:
+
+| Field | Setting |
+| --- | --- |
+| Harness | EleutherAI `lm-evaluation-harness` |
+| Harness version | `0.4.12` |
+| Backend | `--model hf` |
+| Device | `cuda:0` |
+| Dtype | `bfloat16` |
+| Batch size | `auto`, resolved to 64 |
+| Few-shot setting | zero-shot |
+| Dataset limit | none; full task datasets |
+| Samples | `--log_samples` enabled |
+| Seeds | harness defaults: Python 0, NumPy 1234, Torch 1234, few-shot 1234 |
+| Candidate numbers | self-run on the final checkpoint |
+| Baseline numbers | self-run through `scripts/eval_public_baselines.sh`, not copied from leaderboards |
+
+The public baselines were evaluated with the same harness version, task list,
+zero-shot setting, dtype, device class, batch policy, and comparison parser. They
+were **not** evaluated with the same tokenizer or model context length; each
+public model used its own released tokenizer and Hugging Face model config. This
+is therefore a public-model benchmark comparison, not a controlled
+same-tokenizer architecture comparison.
+
 Public baseline win rates on the same task set:
 
 | Baseline | Wins / Tasks | Win Rate |
@@ -112,6 +191,16 @@ The full comparison artifacts are included in this repository under:
 
 - `eval/comparison.md`
 - `eval/comparison.json`
+- `docs/evaluation_report.md`
+
+### Contamination Status
+
+No full benchmark contamination pass is claimed for this release. The project
+repository includes `scripts/check_contamination.py` and
+`scripts/sample_training_text.py`, but a separate audit against ARC, HellaSwag,
+PIQA, LAMBADA, and WinoGrande samples was not completed before release. Because
+the model was trained on a public web-scale FineWeb-Edu slice, benchmark overlap
+cannot be ruled out without that audit.
 
 ## Interpretation
 
