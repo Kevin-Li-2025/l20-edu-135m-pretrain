@@ -1,0 +1,37 @@
+{
+  "train_points": 1903,
+  "eval_points": 38,
+  "first_train": {
+    "event": "train",
+    "step": 1,
+    "loss": 10.8943589925766,
+    "lr": 8.000000000000001e-07,
+    "tokens": 528384,
+    "tokens_per_sec_window": 5958.308692440408
+  },
+  "last_train": {
+    "event": "train",
+    "step": 18920,
+    "loss": 2.8648588210344315,
+    "lr": 4.000017687174911e-05,
+    "tokens": 9997025280,
+    "tokens_per_sec_window": 39791.76880639303
+  },
+  "first_eval": {
+    "event": "eval",
+    "step": 500,
+    "loss": 5.337074369192123,
+    "perplexity": 207.90357057348467,
+    "tokens": 264192000
+  },
+  "last_eval": {
+    "event": "eval",
+    "step": 18928,
+    "tokens": 10001252352,
+    "loss": 2.8731,
+    "perplexity": 17.69,
+    "source": "final_eval_pipeline.log"
+  },
+  "mean_tokens_per_sec_window": 38541.19206441507,
+  "mean_tokens_per_sec_after_step_1000": 38587.389181724684
+}

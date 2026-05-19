@@ -74,6 +74,17 @@ Final validation:
 - Loss: `2.8731`
 - Perplexity: `17.69`
 
+Training artifacts:
+
+- `training/training_metrics.csv`
+- `training/training_summary.json`
+- `training/loss_curve_zoom.png`
+- `training/training_curves.png`
+
+![Loss curve after warmup](training/loss_curve_zoom.png)
+
+![Training curves](training/training_curves.png)
+
 Zero-shot `lm-eval` results for the final checkpoint:
 
 | Task | Metric | Score |

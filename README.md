@@ -44,6 +44,16 @@ trained with much larger token budgets.
 See [docs/evaluation_report.md](docs/evaluation_report.md) for the full
 comparison table and training-token context.
 
+## Training Curves
+
+The run logged 1,903 training points and 38 validation points. The full extracted
+metrics are available in [docs/training_metrics.csv](docs/training_metrics.csv),
+with a compact summary in [docs/training_summary.json](docs/training_summary.json).
+
+![Loss curve after warmup](docs/assets/loss_curve_zoom.png)
+
+![Training curves](docs/assets/training_curves.png)
+
 ## What This Demonstrates
 
 - End-to-end base model pretraining from random initialization.

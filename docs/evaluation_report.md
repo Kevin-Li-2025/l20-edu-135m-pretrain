@@ -15,6 +15,16 @@ baseline comparison run.
 - Tokenizer: `HuggingFaceTB/SmolLM2-135M`
 - Final validation: loss `2.8731`, perplexity `17.69`
 
+## Training Curves
+
+The training log contains 1,903 train-loss points and 38 validation-loss points.
+The extracted metrics are committed as `docs/training_metrics.csv`, with a small
+machine-readable summary in `docs/training_summary.json`.
+
+![Loss curve after warmup](assets/loss_curve_zoom.png)
+
+![Training curves](assets/training_curves.png)
+
 ## lm-eval Results
 
 The final checkpoint was evaluated with EleutherAI `lm-evaluation-harness` on a
