@@ -1,0 +1,46 @@
+run_name: l20-edu-135m-sft
+base_model: AliceYin/l20-edu-135m
+output_dir: runs/l20-edu-135m-sft
+seed: 1337
+block_size: 2048
+
+dataset:
+  name: HuggingFaceH4/ultrachat_200k
+  config_name: default
+  split: train_sft
+  eval_split: test_sft
+  streaming: true
+  local_jsonl_path:
+  messages_column: messages
+  instruction_column: instruction
+  input_column: input
+  output_column: output
+  prompt_column: prompt
+  response_column: response
+  max_examples: 50000
+  eval_max_examples: 1024
+  max_chars: 12000
+  shuffle_buffer: 10000
+  train_on_prompt: false
+  system_prompt: You are a helpful, concise assistant.
+
+trainer:
+  micro_batch_size: 8
+  gradient_accumulation_steps: 8
+  max_steps: 1200
+  warmup_steps: 100
+  learning_rate: 0.00002
+  min_lr_ratio: 0.1
+  weight_decay: 0.0
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  gradient_checkpointing: true
+  log_interval: 10
+  eval_interval: 100
+  eval_batches: 32
+  save_interval: 200
+  keep_last_checkpoints: 2
+  num_workers: 0

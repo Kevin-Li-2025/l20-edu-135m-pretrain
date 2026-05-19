@@ -19,6 +19,7 @@ dependencies = [
 l20-pretrain = "l20_pretrain.train:main"
 l20-generate = "l20_pretrain.generate:main"
 l20-eval-ppl = "l20_pretrain.eval_ppl:main"
+l20-sft = "l20_pretrain.train_sft:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

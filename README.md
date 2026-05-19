@@ -178,9 +178,30 @@ python scripts/compare_lm_eval.py \
   --baseline smollm2-135m=eval_results/smollm2-135m
 ```
 
+## Supervised Fine-Tuning
+
+The repository includes a runnable SFT scaffold for an instruction-tuned version:
+
+- Config: [configs/l20_edu_135m_sft.yaml](configs/l20_edu_135m_sft.yaml)
+- Script: [src/l20_pretrain/train_sft.py](src/l20_pretrain/train_sft.py)
+- Recipe: [docs/sft_recipe.md](docs/sft_recipe.md)
+- HF model card template:
+  [README_HF_l20-edu-135m-sft-template.md](README_HF_l20-edu-135m-sft-template.md)
+
+Run:
+
+```bash
+python -m l20_pretrain.train_sft configs/l20_edu_135m_sft.yaml
+```
+
+The default recipe starts from `AliceYin/l20-edu-135m`, uses
+`HuggingFaceH4/ultrachat_200k`, masks prompt tokens, and trains only on assistant
+response tokens. Keep `l20-edu-135m` and `l20-edu-135m-sft` as separate public
+checkpoints.
+
 ## Next Work
 
-The cleanest next experiment is the controlled baseline:
+The cleanest next pretraining experiment is the controlled baseline:
 
 ```bash
 python -m l20_pretrain.train configs/l20_wide_140m_baseline.yaml
@@ -190,12 +211,10 @@ That would test whether the deep-thin architecture is actually better under the
 same tokenizer, data slice, context length, optimizer, schedule, and 10B-token
 budget.
 
-The most useful product-facing next step is supervised fine-tuning:
-
-- create `l20-edu-135m-sft`
-- use a small high-quality instruction dataset
-- evaluate instruction following, factual QA, short writing, and format control
-- publish it separately from the base model
+The most useful product-facing next step is to run the included SFT recipe,
+evaluate instruction following, factual QA, short writing, format control, and
+base-suite regression, then publish the SFT checkpoint separately from the base
+model.
 
 ## Sources
 
