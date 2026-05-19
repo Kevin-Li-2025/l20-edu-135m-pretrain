@@ -1,7 +1,7 @@
 import torch
 
 from l20_pretrain.sft_data import IGNORE_INDEX, SFTTokenDataset, encode_sft_example, render_sft_example
-from l20_pretrain.train_sft import load_sft_config
+from l20_pretrain.train_sft import SFTDatasetConfig, create_sft_source, load_sft_config
 
 
 class TinyTokenizer:
@@ -64,3 +64,22 @@ def test_sft_config_loads_default_recipe() -> None:
     assert config.dataset.config_name == "default"
     assert config.dataset.train_on_prompt is False
     assert config.sequences_per_step == 64
+
+
+def test_local_sft_eval_source_uses_eval_jsonl(tmp_path) -> None:
+    train_path = tmp_path / "train.jsonl"
+    eval_path = tmp_path / "eval.jsonl"
+    train_path.write_text('{"prompt":"train","response":"A"}\n', encoding="utf-8")
+    eval_path.write_text('{"prompt":"eval","response":"B"}\n', encoding="utf-8")
+
+    config = SFTDatasetConfig(
+        local_jsonl_path=str(train_path),
+        eval_local_jsonl_path=str(eval_path),
+        split="train",
+        eval_split="eval",
+    )
+
+    train_row = next(iter(create_sft_source(config)))
+    eval_row = next(iter(create_sft_source(config, split="eval")))
+    assert train_row["prompt"] == "train"
+    assert eval_row["prompt"] == "eval"

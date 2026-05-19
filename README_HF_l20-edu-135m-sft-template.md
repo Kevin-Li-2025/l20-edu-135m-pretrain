@@ -36,7 +36,7 @@ assistant without additional safety evaluation and domain validation.
 | Parameters | 134,515,008 |
 | Context length | 2048 |
 | Tokenizer | `HuggingFaceTB/SmolLM2-135M` tokenizer |
-| SFT dataset | `HuggingFaceH4/ultrachat_200k` by default |
+| SFT dataset | selected subset of `HuggingFaceH4/ultrachat_200k` by default |
 | SFT examples | fill after run |
 | Final SFT checkpoint | fill after run |
 | Hardware | single NVIDIA L20 GPU |
@@ -90,19 +90,27 @@ print(tokenizer.decode(outputs[0], skip_special_tokens=True))
 | Field | Value |
 | --- | --- |
 | Training script | `python -m l20_pretrain.train_sft` |
-| Config | `configs/l20_edu_135m_sft.yaml` |
+| Config | fill after run, for example `configs/l20_edu_135m_sft_6k_quality.yaml` |
 | Sequence length | 2048 |
 | Micro batch size | 8 |
 | Gradient accumulation | 8 |
 | Global batch size | 64 sequences |
-| Max steps | 1,200 |
+| Max steps | fill after run |
 | Optimizer | AdamW |
-| Learning rate | `2e-5` |
+| Learning rate | fill after run |
 | Schedule | warmup + cosine decay |
-| Warmup steps | 100 |
+| Warmup steps | fill after run |
 | Weight decay | 0.0 |
 | Precision | bfloat16 |
 | Loss mask | assistant response tokens only |
+
+Recommended data variants from the training repository:
+
+| Variant | Data file | Purpose |
+| --- | --- | --- |
+| `1k_long` | `data/sft/ultrachat_1k_long.jsonl` | small high-signal run |
+| `6k_quality` | `data/sft/ultrachat_6k_quality.jsonl` | recommended first publish candidate |
+| `20k_mixed` | `data/sft/ultrachat_20k_mixed.jsonl` | broader coverage run |
 
 ## Evaluation
 

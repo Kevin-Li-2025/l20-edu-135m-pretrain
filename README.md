@@ -183,21 +183,40 @@ python scripts/compare_lm_eval.py \
 The repository includes a runnable SFT scaffold for an instruction-tuned version:
 
 - Config: [configs/l20_edu_135m_sft.yaml](configs/l20_edu_135m_sft.yaml)
+- Curated-run configs:
+  [1k-long](configs/l20_edu_135m_sft_1k_long.yaml),
+  [6k-quality](configs/l20_edu_135m_sft_6k_quality.yaml),
+  [20k-mixed](configs/l20_edu_135m_sft_20k_mixed.yaml)
 - Script: [src/l20_pretrain/train_sft.py](src/l20_pretrain/train_sft.py)
+- Data selector: [scripts/prepare_sft_data.py](scripts/prepare_sft_data.py)
+- Sanity eval: [scripts/eval_sft_sanity.py](scripts/eval_sft_sanity.py)
 - Recipe: [docs/sft_recipe.md](docs/sft_recipe.md)
 - HF model card template:
   [README_HF_l20-edu-135m-sft-template.md](README_HF_l20-edu-135m-sft-template.md)
 
-Run:
+Prepare the recommended 6k-quality SFT split:
 
 ```bash
-python -m l20_pretrain.train_sft configs/l20_edu_135m_sft.yaml
+python scripts/prepare_sft_data.py \
+  --strategy quality \
+  --target-size 6000 \
+  --eval-size 512 \
+  --output data/sft/ultrachat_6k_quality.jsonl \
+  --eval-output data/sft/ultrachat_eval_512.jsonl \
+  --summary-output data/sft/ultrachat_6k_quality_summary.json
+```
+
+Run the main SFT candidate:
+
+```bash
+python -m l20_pretrain.train_sft configs/l20_edu_135m_sft_6k_quality.yaml
 ```
 
 The default recipe starts from `AliceYin/l20-edu-135m`, uses
-`HuggingFaceH4/ultrachat_200k`, masks prompt tokens, and trains only on assistant
-response tokens. Keep `l20-edu-135m` and `l20-edu-135m-sft` as separate public
-checkpoints.
+`HuggingFaceH4/ultrachat_200k`, masks prompt tokens, and trains only on
+assistant response tokens. The recommended comparison is `1k_long` vs
+`6k_quality` vs `20k_mixed` under the same sanity eval. Keep `l20-edu-135m` and
+`l20-edu-135m-sft` as separate public checkpoints.
 
 ## Next Work
 

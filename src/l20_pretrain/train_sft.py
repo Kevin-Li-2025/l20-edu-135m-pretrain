@@ -43,6 +43,7 @@ class SFTDatasetConfig:
     eval_split: str | None = "test_sft"
     streaming: bool = True
     local_jsonl_path: str | None = None
+    eval_local_jsonl_path: str | None = None
     messages_column: str = "messages"
     instruction_column: str = "instruction"
     input_column: str = "input"
@@ -136,6 +137,8 @@ def set_seed(seed: int) -> None:
 
 
 def create_sft_source(config: SFTDatasetConfig, *, split: str | None = None) -> Any:
+    if split is not None and config.eval_local_jsonl_path and split == config.eval_split:
+        return iter_local_jsonl(config.eval_local_jsonl_path)
     if config.local_jsonl_path:
         return iter_local_jsonl(config.local_jsonl_path)
     if not config.name:
@@ -219,7 +222,7 @@ def evaluate(
     dtype: torch.dtype,
 ) -> dict[str, float]:
     eval_split = config.dataset.eval_split
-    if not eval_split and not config.dataset.local_jsonl_path:
+    if not eval_split and not config.dataset.local_jsonl_path and not config.dataset.eval_local_jsonl_path:
         return {"loss": float("nan"), "supervised_tokens": 0.0}
 
     model.eval()
