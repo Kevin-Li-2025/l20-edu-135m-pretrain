@@ -114,6 +114,16 @@ python -m l20_pretrain.train_sft configs/l20_edu_135m_sft_6k_quality.yaml
 python -m l20_pretrain.train_sft configs/l20_edu_135m_sft_20k_mixed.yaml
 ```
 
+On a shared GPU box, prefer the guarded 6k pipeline:
+
+```bash
+scripts/run_sft_6k_quality_pipeline.sh
+```
+
+It prepares the 6k-quality data if needed, waits until GPU memory usage is below
+`MAX_GPU_USED_MB` (default 8000 MiB), runs SFT, and then runs the sanity eval.
+It does not kill or interrupt existing GPU processes.
+
 ## Optimization
 
 | Field | Value |

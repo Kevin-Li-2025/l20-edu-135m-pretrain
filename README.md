@@ -212,6 +212,13 @@ Run the main SFT candidate:
 python -m l20_pretrain.train_sft configs/l20_edu_135m_sft_6k_quality.yaml
 ```
 
+On a shared GPU box, use the guarded pipeline so it waits for free VRAM instead
+of interrupting another process:
+
+```bash
+scripts/run_sft_6k_quality_pipeline.sh
+```
+
 The default recipe starts from `AliceYin/l20-edu-135m`, uses
 `HuggingFaceH4/ultrachat_200k`, masks prompt tokens, and trains only on
 assistant response tokens. The recommended comparison is `1k_long` vs
