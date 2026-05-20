@@ -1,0 +1,57 @@
+{
+  "run_name": "l20-edu-135m-sft-6k-quality-lr5e6",
+  "base_model": "runs/l20-edu-135m-deepthin/step-018928",
+  "train_examples": 6000,
+  "eval_examples": 512,
+  "max_steps": 120,
+  "micro_batch_size": 8,
+  "gradient_accumulation_steps": 8,
+  "global_batch_sequences": 64,
+  "sequence_length": 2048,
+  "learning_rate": 5e-06,
+  "warmup_steps": 12,
+  "scheduler": "linear warmup + cosine decay",
+  "dtype": "bfloat16",
+  "loss_mask": "assistant response tokens only",
+  "final_checkpoint": "runs/l20-edu-135m-sft-6k-quality-lr5e6/step-000120",
+  "train": {
+    "first_logged_loss": 2.2286899238824844,
+    "final_logged_loss": 2.1222473233938217,
+    "min_logged_loss": 2.1222473233938217,
+    "mean_steps_per_sec": 0.2200202790727762,
+    "mean_supervised_tokens_per_sec": 3793.6643788776655
+  },
+  "eval": {
+    "steps": [
+      40,
+      80,
+      120
+    ],
+    "losses": [
+      2.1639885306358337,
+      2.148058886329333,
+      2.146678999066353
+    ],
+    "perplexities": [
+      8.705791820313925,
+      8.568210374262197,
+      8.55639536346641
+    ],
+    "final_loss": 2.146678999066353,
+    "final_perplexity": 8.55639536346641,
+    "best_loss": 2.146678999066353
+  },
+  "sanity": {
+    "automatic_passed": 3,
+    "automatic_scored": 5,
+    "failed_ids": [
+      "capital_new_zealand",
+      "json_format"
+    ],
+    "manual_review_ids": [
+      "short_story",
+      "concise_explanation"
+    ],
+    "verdict": "not_improved; lower LR did not fix repetition or format following and eval loss is worse than 6k-quality v1"
+  }
+}

@@ -221,6 +221,19 @@ Artifacts:
 
 ![SFT 6k-quality loss curve](docs/assets/sft_6k_quality_loss_curve.png)
 
+Follow-up `6k_quality_lr5e6` lowered the learning rate to `5e-6` and stopped at
+120 steps. It did not improve the behavior gates: automatic sanity checks stayed
+at `3/5`, JSON and New Zealand capital still failed, and held-out SFT loss was
+worse (`2.1467`). This suggests the next useful iteration is data quality and
+instruction-format targeting, not just smaller LR.
+
+The next experiment is a small behavior patch:
+[configs/l20_edu_135m_sft_behavior_patch_offline.yaml](configs/l20_edu_135m_sft_behavior_patch_offline.yaml)
+with data from [scripts/prepare_behavior_sft_data.py](scripts/prepare_behavior_sft_data.py).
+It starts from the 6k-quality checkpoint and targets concise answers, JSON,
+two-bullet responses, short stories, and anti-repetition behavior. This should be
+reported as a targeted repair run, not a broad chat capability claim.
+
 Prepare the recommended 6k-quality SFT split:
 
 ```bash
