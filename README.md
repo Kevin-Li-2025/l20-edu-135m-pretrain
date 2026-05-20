@@ -234,6 +234,14 @@ It starts from the 6k-quality checkpoint and targets concise answers, JSON,
 two-bullet responses, short stories, and anti-repetition behavior. This should be
 reported as a targeted repair run, not a broad chat capability claim.
 
+Behavior-patch result: the run completed, but did not pass the behavior gate.
+It stayed at `3/5` automatic sanity checks, still failed New Zealand capital and
+JSON formatting, and retained repetition. The recommendation is to stop trying
+to turn this 135M checkpoint into a strong chat assistant and use these SFT runs
+as post-training pipeline evidence instead. See
+[docs/sft_behavior_patch_summary.json](docs/sft_behavior_patch_summary.json) and
+[docs/sft_behavior_patch_sanity_report.md](docs/sft_behavior_patch_sanity_report.md).
+
 Prepare the recommended 6k-quality SFT split:
 
 ```bash

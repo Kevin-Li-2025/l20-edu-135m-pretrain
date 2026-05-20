@@ -190,6 +190,20 @@ This is an explicit behavior repair experiment, not a claim of broad assistant
 capability. If it improves the quick sanity set, it should still be validated on
 fresh held-out prompts before publishing an SFT checkpoint.
 
+Result: the behavior patch did not improve the gate enough to publish. It
+completed 80 steps, reached final eval loss `4.4309` on the tiny behavior eval,
+and stayed at `3/5` automatic sanity checks. It still failed New Zealand capital
+and JSON formatting, and generations remained repetitive. See:
+
+- [sft_behavior_patch_metrics.csv](sft_behavior_patch_metrics.csv)
+- [sft_behavior_patch_summary.json](sft_behavior_patch_summary.json)
+- [sft_behavior_patch_sanity_report.md](sft_behavior_patch_sanity_report.md)
+
+This closes the 135M chat-SFT attempt as a documented pipeline and failure
+analysis. Further effort is better spent on post-training a stronger coding base
+model, where improvements can be measured with HumanEval, MBPP, BigCodeBench,
+and LiveCodeBench.
+
 ## Optimization
 
 | Field | Value |
