@@ -180,12 +180,16 @@ python scripts/compare_lm_eval.py \
 
 ## Supervised Fine-Tuning
 
-The repository includes a runnable SFT scaffold for an instruction-tuned version:
+The repository includes a runnable SFT scaffold and one completed first-pass
+instruction-tuning run. The completed `6k_quality` run is useful evidence for
+the post-training pipeline, but it is not publish-quality as a chat assistant:
+it lowers held-out SFT loss while still showing repetition and format failures.
 
 - Config: [configs/l20_edu_135m_sft.yaml](configs/l20_edu_135m_sft.yaml)
 - Curated-run configs:
   [1k-long](configs/l20_edu_135m_sft_1k_long.yaml),
   [6k-quality](configs/l20_edu_135m_sft_6k_quality.yaml),
+  [6k-quality offline](configs/l20_edu_135m_sft_6k_quality_offline.yaml),
   [20k-mixed](configs/l20_edu_135m_sft_20k_mixed.yaml)
 - Script: [src/l20_pretrain/train_sft.py](src/l20_pretrain/train_sft.py)
 - Data selector: [scripts/prepare_sft_data.py](scripts/prepare_sft_data.py)
@@ -193,6 +197,29 @@ The repository includes a runnable SFT scaffold for an instruction-tuned version
 - Recipe: [docs/sft_recipe.md](docs/sft_recipe.md)
 - HF model card template:
   [README_HF_l20-edu-135m-sft-template.md](README_HF_l20-edu-135m-sft-template.md)
+
+Completed `6k_quality` SFT v1:
+
+| Field | Value |
+| --- | --- |
+| Base checkpoint | `runs/l20-edu-135m-deepthin/step-018928` |
+| Train examples | 6,000 quality-filtered UltraChat rows |
+| Eval examples | 512 UltraChat rows |
+| Global batch | 64 sequences |
+| Max steps | 300 |
+| Final checkpoint | `runs/l20-edu-135m-sft-6k-quality/step-000300` |
+| Final train loss | 2.0336 |
+| Final eval loss / perplexity | 2.0050 / 7.43 |
+| Sanity automatic checks | 3 / 5 passed |
+| Release verdict | Not publish-quality yet; needs a more conservative follow-up run |
+
+Artifacts:
+
+- Metrics: [docs/sft_6k_quality_metrics.csv](docs/sft_6k_quality_metrics.csv)
+- Summary: [docs/sft_6k_quality_summary.json](docs/sft_6k_quality_summary.json)
+- Sanity report: [docs/sft_6k_quality_sanity_report.md](docs/sft_6k_quality_sanity_report.md)
+
+![SFT 6k-quality loss curve](docs/assets/sft_6k_quality_loss_curve.png)
 
 Prepare the recommended 6k-quality SFT split:
 

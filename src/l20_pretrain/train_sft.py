@@ -21,7 +21,7 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from .config import _clean_nulls
-from .sft_data import IGNORE_INDEX, SFTTokenDataset, collate_sft_batch, iter_local_jsonl
+from .sft_data import IGNORE_INDEX, LocalJsonlExamples, SFTTokenDataset, collate_sft_batch
 from .train import (
     autocast_context,
     get_device,
@@ -138,9 +138,9 @@ def set_seed(seed: int) -> None:
 
 def create_sft_source(config: SFTDatasetConfig, *, split: str | None = None) -> Any:
     if split is not None and config.eval_local_jsonl_path and split == config.eval_split:
-        return iter_local_jsonl(config.eval_local_jsonl_path)
+        return LocalJsonlExamples(config.eval_local_jsonl_path)
     if config.local_jsonl_path:
-        return iter_local_jsonl(config.local_jsonl_path)
+        return LocalJsonlExamples(config.local_jsonl_path)
     if not config.name:
         raise ValueError("SFT dataset requires either local_jsonl_path or name")
 

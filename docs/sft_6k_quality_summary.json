@@ -1,0 +1,70 @@
+{
+  "run_name": "l20-edu-135m-sft-6k-quality",
+  "base_model": "runs/l20-edu-135m-deepthin/step-018928",
+  "train_examples": 6000,
+  "eval_examples": 512,
+  "max_steps": 300,
+  "micro_batch_size": 8,
+  "gradient_accumulation_steps": 8,
+  "global_batch_sequences": 64,
+  "sequence_length": 2048,
+  "learning_rate": 2e-05,
+  "warmup_steps": 30,
+  "scheduler": "linear warmup + cosine decay",
+  "dtype": "bfloat16",
+  "loss_mask": "assistant response tokens only",
+  "final_checkpoint": "runs/l20-edu-135m-sft-6k-quality/step-000300",
+  "train": {
+    "first_logged_loss": 2.2286899238824844,
+    "final_logged_loss": 2.0336364805698395,
+    "min_logged_loss": 1.8588995784521103,
+    "mean_steps_per_sec": 0.221278497094975,
+    "mean_supervised_tokens_per_sec": 3778.5918237155333
+  },
+  "eval": {
+    "steps": [
+      50,
+      100,
+      150,
+      200,
+      250,
+      300
+    ],
+    "losses": [
+      2.0566065112749734,
+      2.0242097973823547,
+      2.0120603889226913,
+      2.0068023602167764,
+      2.0054994771877923,
+      2.004983643690745
+    ],
+    "perplexities": [
+      7.819389725347062,
+      7.570126646652182,
+      7.47871053624051,
+      7.439490462054989,
+      7.4298039877294295,
+      7.4259724342628335
+    ],
+    "final_loss": 2.004983643690745,
+    "final_perplexity": 7.4259724342628335,
+    "best_loss": 2.004983643690745
+  },
+  "sanity": {
+    "automatic_passed": 3,
+    "automatic_scored": 5,
+    "failed_ids": [
+      "capital_new_zealand",
+      "json_format"
+    ],
+    "manual_review_ids": [
+      "short_story",
+      "concise_explanation"
+    ],
+    "verdict": "not_publish_quality; improves instruction format but still repeats and fails JSON/New Zealand sanity checks"
+  },
+  "notes": [
+    "Run used offline local base checkpoint because the remote machine had no Hugging Face network access.",
+    "Initial failed attempt exposed that local JSONL SFT sources must be re-iterable for multi-epoch max_steps; fixed in code."
+  ]
+}

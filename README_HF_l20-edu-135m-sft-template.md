@@ -36,9 +36,9 @@ assistant without additional safety evaluation and domain validation.
 | Parameters | 134,515,008 |
 | Context length | 2048 |
 | Tokenizer | `HuggingFaceTB/SmolLM2-135M` tokenizer |
-| SFT dataset | selected subset of `HuggingFaceH4/ultrachat_200k` by default |
-| SFT examples | fill after run |
-| Final SFT checkpoint | fill after run |
+| SFT dataset | quality-filtered subset of `HuggingFaceH4/ultrachat_200k` |
+| SFT examples | 6,000 train / 512 eval |
+| Final SFT checkpoint | `runs/l20-edu-135m-sft-6k-quality/step-000300` |
 | Hardware | single NVIDIA L20 GPU |
 
 ## Usage
@@ -90,16 +90,16 @@ print(tokenizer.decode(outputs[0], skip_special_tokens=True))
 | Field | Value |
 | --- | --- |
 | Training script | `python -m l20_pretrain.train_sft` |
-| Config | fill after run, for example `configs/l20_edu_135m_sft_6k_quality.yaml` |
+| Config | `configs/l20_edu_135m_sft_6k_quality_offline.yaml` |
 | Sequence length | 2048 |
 | Micro batch size | 8 |
 | Gradient accumulation | 8 |
 | Global batch size | 64 sequences |
-| Max steps | fill after run |
+| Max steps | 300 |
 | Optimizer | AdamW |
-| Learning rate | fill after run |
+| Learning rate | `2e-5` |
 | Schedule | warmup + cosine decay |
-| Warmup steps | fill after run |
+| Warmup steps | 30 |
 | Weight decay | 0.0 |
 | Precision | bfloat16 |
 | Loss mask | assistant response tokens only |
@@ -114,16 +114,21 @@ Recommended data variants from the training repository:
 
 ## Evaluation
 
-Fill after training:
-
 | Check | Result |
 | --- | --- |
-| Held-out SFT loss | TBD |
-| Instruction-following sanity set | TBD |
-| Factual QA sanity set | TBD |
-| Short writing sanity set | TBD |
-| JSON formatting sanity set | TBD |
+| Held-out SFT loss | 2.0050 |
+| Held-out SFT perplexity | 7.43 |
+| Instruction-following sanity set | weak; verbose and repetitive |
+| Factual QA sanity set | 3/4 checked capitals contained expected answer |
+| JSON formatting sanity set | failed |
 | Base `lm-eval` regression suite | TBD |
+
+The first 6k-quality SFT run should be treated as a post-training pipeline
+artifact, not a production chat assistant. It improved SFT eval loss but still
+failed important behavior checks: it repeats phrases, does not reliably obey
+"answer only" instructions, missed Wellington for New Zealand, and returned
+invalid JSON on a formatting prompt. The next run should use a more conservative
+quality-focused recipe before public SFT release.
 
 ## Limitations
 

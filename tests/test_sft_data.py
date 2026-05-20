@@ -83,3 +83,17 @@ def test_local_sft_eval_source_uses_eval_jsonl(tmp_path) -> None:
     eval_row = next(iter(create_sft_source(config, split="eval")))
     assert train_row["prompt"] == "train"
     assert eval_row["prompt"] == "eval"
+
+
+def test_local_sft_source_can_be_reiterated(tmp_path) -> None:
+    train_path = tmp_path / "train.jsonl"
+    train_path.write_text(
+        '{"prompt":"first","response":"A"}\n{"prompt":"second","response":"B"}\n',
+        encoding="utf-8",
+    )
+    config = SFTDatasetConfig(local_jsonl_path=str(train_path))
+
+    source = create_sft_source(config)
+
+    assert [row["prompt"] for row in source] == ["first", "second"]
+    assert [row["prompt"] for row in source] == ["first", "second"]

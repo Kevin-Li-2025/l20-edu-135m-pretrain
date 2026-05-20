@@ -1,0 +1,41 @@
+run_name: l20-edu-135m-sft-6k-quality
+base_model: runs/l20-edu-135m-deepthin/step-018928
+output_dir: runs/l20-edu-135m-sft-6k-quality
+seed: 1337
+block_size: 2048
+
+dataset:
+  name: HuggingFaceH4/ultrachat_200k
+  config_name: default
+  split: train
+  eval_split: eval
+  streaming: true
+  local_jsonl_path: data/sft/ultrachat_6k_quality.jsonl
+  eval_local_jsonl_path: data/sft/ultrachat_eval_512.jsonl
+  messages_column: messages
+  max_examples: 6000
+  eval_max_examples: 512
+  max_chars: 12000
+  train_on_prompt: false
+  system_prompt: You are a helpful, concise assistant.
+
+trainer:
+  micro_batch_size: 8
+  gradient_accumulation_steps: 8
+  max_steps: 300
+  warmup_steps: 30
+  learning_rate: 0.00002
+  min_lr_ratio: 0.1
+  weight_decay: 0.0
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  gradient_checkpointing: true
+  log_interval: 10
+  eval_interval: 50
+  eval_batches: 24
+  save_interval: 100
+  keep_last_checkpoints: 2
+  num_workers: 0

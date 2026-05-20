@@ -24,6 +24,14 @@ def iter_local_jsonl(path: str | Path) -> Iterator[dict[str, Any]]:
                 yield value
 
 
+class LocalJsonlExamples:
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+
+    def __iter__(self) -> Iterator[dict[str, Any]]:
+        return iter_local_jsonl(self.path)
+
+
 def _text(value: Any) -> str:
     return value.strip() if isinstance(value, str) else ""
 

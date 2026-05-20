@@ -6,11 +6,16 @@ RUN_NAME="${RUN_NAME:-l20-edu-135m-sft-6k-quality}"
 MAX_GPU_USED_MB="${MAX_GPU_USED_MB:-8000}"
 CHECK_INTERVAL_SECONDS="${CHECK_INTERVAL_SECONDS:-60}"
 STABLE_GPU_CHECKS="${STABLE_GPU_CHECKS:-3}"
+PYTHON="${PYTHON:-.venv/bin/python}"
+
+if [[ ! -x "${PYTHON}" ]]; then
+  PYTHON="$(command -v python3)"
+fi
 
 mkdir -p logs data/sft eval_results/sft_sanity_6k
 
 if [[ ! -s data/sft/ultrachat_6k_quality.jsonl || ! -s data/sft/ultrachat_eval_512.jsonl ]]; then
-  python scripts/prepare_sft_data.py \
+  "${PYTHON}" scripts/prepare_sft_data.py \
     --strategy quality \
     --target-size 6000 \
     --eval-size 512 \
@@ -37,8 +42,8 @@ while true; do
 done
 
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
-python -m l20_pretrain.train_sft "${CONFIG}"
+"${PYTHON}" -m l20_pretrain.train_sft "${CONFIG}"
 
-python scripts/eval_sft_sanity.py "runs/${RUN_NAME}/final" \
+"${PYTHON}" scripts/eval_sft_sanity.py "runs/${RUN_NAME}/final" \
   --output "eval_results/sft_sanity_6k/results.jsonl" \
   --markdown-output "eval_results/sft_sanity_6k/report.md"

@@ -104,6 +104,7 @@ largest SFT mixture.
 | --- | --- | --- |
 | `1k_long` | `configs/l20_edu_135m_sft_1k_long.yaml` | LIMA-style small high-signal run; checks whether format and instruction following improve quickly |
 | `6k_quality` | `configs/l20_edu_135m_sft_6k_quality.yaml` | Main recommended first publish candidate |
+| `6k_quality_offline` | `configs/l20_edu_135m_sft_6k_quality_offline.yaml` | Same 6k recipe, but loads the local base checkpoint on GPU boxes without Hugging Face network access |
 | `20k_mixed` | `configs/l20_edu_135m_sft_20k_mixed.yaml` | Broader mixture if 6k underfits or lacks coverage |
 
 Run:
@@ -124,6 +125,36 @@ It prepares the 6k-quality data if needed, waits until GPU memory usage is below
 `MAX_GPU_USED_MB` (default 8000 MiB), runs SFT, and then runs the sanity eval.
 It does not kill or interrupt existing GPU processes.
 
+## Completed 6k-Quality Run
+
+The first completed run used the offline config because the remote L20 machine
+could not reach Hugging Face during the SFT launch.
+
+| Field | Value |
+| --- | --- |
+| Run name | `l20-edu-135m-sft-6k-quality` |
+| Config | `configs/l20_edu_135m_sft_6k_quality_offline.yaml` |
+| Base checkpoint | `runs/l20-edu-135m-deepthin/step-018928` |
+| Train examples | 6,000 |
+| Eval examples | 512 |
+| Max steps | 300 |
+| Global batch | 64 sequences |
+| Final checkpoint | `runs/l20-edu-135m-sft-6k-quality/step-000300` |
+| Final train loss | 2.0336 |
+| Final eval loss / perplexity | 2.0050 / 7.43 |
+| Sanity automatic checks | 3 / 5 passed |
+
+The run confirms that the SFT stack works end to end, including local JSONL
+data selection, assistant-only loss masking, eval, checkpointing, and sanity
+generation. It is not a publish-quality instruction model yet. The sanity set
+still shows repetition, an incorrect New Zealand capital answer, and invalid
+JSON formatting. See:
+
+- [sft_6k_quality_metrics.csv](sft_6k_quality_metrics.csv)
+- [sft_6k_quality_summary.json](sft_6k_quality_summary.json)
+- [sft_6k_quality_sanity_report.md](sft_6k_quality_sanity_report.md)
+- [assets/sft_6k_quality_loss_curve.png](assets/sft_6k_quality_loss_curve.png)
+
 ## Optimization
 
 | Field | Value |
@@ -131,11 +162,11 @@ It does not kill or interrupt existing GPU processes.
 | Micro batch size | 8 sequences |
 | Gradient accumulation | 8 |
 | Global batch size | 64 sequences |
-| Max steps | 1,200 |
+| Max steps | 300 for the completed 6k-quality run; 1,200 for the generic default config |
 | Optimizer | AdamW |
 | Learning rate | `2e-5` |
 | LR schedule | linear warmup + cosine decay |
-| Warmup steps | 100 |
+| Warmup steps | 30 for the completed 6k-quality run; 100 for the generic default config |
 | Weight decay | 0.0 |
 | Precision | bfloat16 |
 | Gradient checkpointing | enabled |
