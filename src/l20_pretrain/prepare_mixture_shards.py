@@ -31,7 +31,7 @@ from .quality import code_quality_filter, normalize_code_text, normalize_text, q
 class SourceSpec:
     name: str
     kind: str
-    dataset: str
+    dataset: str = ""
     config_name: str | None = None
     split: str = "train"
     text_column: str = "text"
@@ -43,6 +43,9 @@ class SourceSpec:
     min_int_score: int | None = None
     require_license_type: str | None = None
     include_metadata_header: bool = False
+    tokenized_path: str | None = None
+    tokenized_split: str = "train"
+    sample_seed: int = 0
     download_workers: int = 8
     download_buffer_size: int = 64
     quality: dict[str, Any] = field(default_factory=dict)
@@ -239,6 +242,65 @@ def compute_train_quotas(target_tokens: int, sources: list[SourceSpec]) -> dict[
     return quotas
 
 
+def write_token_array(handle: Any, tokens: np.ndarray) -> int:
+    if tokens.size == 0:
+        return 0
+    array = np.asarray(tokens, dtype=np.uint32)
+    array.tofile(handle)
+    return int(array.size)
+
+
+def copy_tokenized_replay_source(
+    source: SourceSpec,
+    *,
+    train_handle: Any,
+    quota: int,
+    target_tokens: int,
+    train_tokens: int,
+    block_size: int,
+    counters: Counter[str],
+    source_counter: Counter[str],
+    source_tokens: dict[str, int],
+) -> int:
+    if not source.tokenized_path:
+        raise ValueError(f"{source.name} tokenized_replay source requires tokenized_path")
+    source_path = Path(source.tokenized_path) / f"{source.tokenized_split}.bin"
+    if not source_path.exists():
+        raise FileNotFoundError(f"Tokenized replay shard not found: {source_path}")
+
+    data = np.memmap(source_path, dtype=np.uint32, mode="r")
+    total_tokens = int(data.shape[0])
+    if total_tokens <= 0:
+        raise ValueError(f"Tokenized replay shard is empty: {source_path}")
+
+    rng = np.random.default_rng(source.sample_seed)
+    full_blocks = max(1, total_tokens // block_size)
+    written_total = 0
+    while source_tokens[source.name] < quota and train_tokens + written_total < target_tokens:
+        block_ids = np.arange(full_blocks, dtype=np.int64)
+        rng.shuffle(block_ids)
+        for block_id in block_ids:
+            remaining_quota = quota - source_tokens[source.name]
+            remaining_target = target_tokens - train_tokens - written_total
+            take = min(block_size, remaining_quota, remaining_target)
+            if take <= 0:
+                break
+            start = int(block_id) * block_size
+            if start + take > total_tokens:
+                start = max(0, total_tokens - take)
+            written = write_token_array(train_handle, data[start : start + take])
+            written_total += written
+            source_tokens[source.name] += written
+            counters["kept"] += 1
+            counters["tokenized_replay_chunks"] += 1
+            source_counter["kept"] += 1
+            source_counter["train_kept"] += 1
+            source_counter["tokenized_replay_chunks"] += 1
+            if source_tokens[source.name] >= quota or train_tokens + written_total >= target_tokens:
+                break
+    return written_total
+
+
 def main() -> None:
     args = parse_args()
     recipe = load_recipe(args.recipe)
@@ -271,6 +333,23 @@ def main() -> None:
 
     with train_path.open("wb") as train_handle, val_path.open("wb") as val_handle:
         for source in sources:
+            if source.kind == "tokenized_replay":
+                written = copy_tokenized_replay_source(
+                    source,
+                    train_handle=train_handle,
+                    quota=quotas[source.name],
+                    target_tokens=target_tokens,
+                    train_tokens=train_tokens,
+                    block_size=block_size,
+                    counters=counters,
+                    source_counter=source_counters[source.name],
+                    source_tokens=source_tokens,
+                )
+                train_tokens += written
+                if train_tokens >= target_tokens and val_tokens >= val_tokens_target:
+                    break
+                continue
+
             for example in iter_source_examples(source, s3_client=s3_client):
                 counters["seen"] += 1
                 source_counters[source.name]["seen"] += 1

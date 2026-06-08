@@ -16,6 +16,14 @@ dependencies = [
   "transformers>=4.45,<5",
 ]
 
+[project.optional-dependencies]
+speed = [
+  "liger-kernel>=0.5",
+]
+eval = [
+  "lm-eval>=0.4.4",
+]
+
 [project.scripts]
 l20-pretrain = "l20_pretrain.train:main"
 l20-generate = "l20_pretrain.generate:main"

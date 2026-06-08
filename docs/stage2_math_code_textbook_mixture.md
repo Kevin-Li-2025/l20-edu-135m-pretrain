@@ -13,6 +13,17 @@ Improve reasoning-style educational behavior without turning the 135M model into
 - Sequence length: 8192
 - Steps: 555 at 540,672 tokens/step
 
+## Recommended Variant
+
+Prefer the replay recipe for the next full Stage-2 run unless a pilot ablation beats it:
+
+```bash
+bash scripts/prepare_l20_stage2_math_code_textbook_replay_8k.sh
+bash scripts/train_l20_stage2_math_code_textbook_replay_8k.sh
+```
+
+That variant keeps 15% Stage-1 high-quality edu replay and rebalances the new-domain mix to reduce drift during continued pretraining.
+
 ## Data Mix
 
 - 35% `HuggingFaceTB/finemath`, config `finemath-4plus`

@@ -1,0 +1,53 @@
+name: l20-eval-textbook
+output_dir: data/l20_eval_textbook_8k
+tokenizer: AliceYin/l20-edu-135m
+target_tokens: 8192
+val_tokens: 524288
+block_size: 8192
+report_interval: 1000
+
+sources:
+  - name: cosmopedia-openstax
+    family: synthetic_textbook
+    kind: hf_text
+    dataset: HuggingFaceTB/cosmopedia
+    config_name: openstax
+    split: train
+    text_column: text
+    weight: 0.40
+    min_chars: 700
+    max_chars: 45000
+    quality:
+      min_alpha_ratio: 0.45
+      max_digit_ratio: 0.35
+      min_unique_word_ratio: 0.16
+
+  - name: cosmopedia-khanacademy
+    family: synthetic_textbook
+    kind: hf_text
+    dataset: HuggingFaceTB/cosmopedia
+    config_name: khanacademy
+    split: train
+    text_column: text
+    weight: 0.30
+    min_chars: 700
+    max_chars: 45000
+    quality:
+      min_alpha_ratio: 0.45
+      max_digit_ratio: 0.35
+      min_unique_word_ratio: 0.16
+
+  - name: cosmopedia-auto-math-text
+    family: synthetic_textbook
+    kind: hf_text
+    dataset: HuggingFaceTB/cosmopedia
+    config_name: auto_math_text
+    split: train
+    text_column: text
+    weight: 0.30
+    min_chars: 700
+    max_chars: 45000
+    quality:
+      min_alpha_ratio: 0.40
+      max_digit_ratio: 0.40
+      min_unique_word_ratio: 0.14

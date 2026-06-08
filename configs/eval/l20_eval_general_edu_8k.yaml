@@ -1,0 +1,21 @@
+run_name: l20-eval-general-edu-8k
+output_dir: runs/eval-general-edu-8k
+seed: 20260610
+tokenizer_name: AliceYin/l20-edu-135m
+
+dataset:
+  tokenized_path: data/l20_edu_hq_8k
+  split: val
+  text_column: text
+  append_eos: true
+
+model:
+  block_size: 8192
+
+trainer:
+  micro_batch_size: 2
+  gradient_accumulation_steps: 1
+  max_steps: 1
+  warmup_steps: 1
+  dtype: bfloat16
+  eval_batches: 8

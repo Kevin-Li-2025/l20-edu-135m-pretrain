@@ -197,6 +197,37 @@ def load_tokenizer(config: PretrainConfig) -> Any:
     return tokenizer
 
 
+def maybe_apply_liger_kernel(config: PretrainConfig) -> bool:
+    if not config.trainer.liger_kernel:
+        return False
+    try:
+        from liger_kernel.transformers import apply_liger_kernel_to_llama
+    except ImportError as exc:
+        raise RuntimeError(
+            "trainer.liger_kernel=true requires `liger-kernel`. "
+            "Install it with `pip install 'l20-pretrain[speed]'` or `pip install liger-kernel`."
+        ) from exc
+
+    apply_liger_kernel_to_llama()
+    return True
+
+
+def compile_model_if_requested(
+    model: torch.nn.Module,
+    config: PretrainConfig,
+    device: torch.device,
+) -> torch.nn.Module:
+    if not config.trainer.compile or not hasattr(torch, "compile") or device.type != "cuda":
+        return model
+
+    kwargs: dict[str, Any] = {}
+    if config.trainer.compile_mode:
+        kwargs["mode"] = config.trainer.compile_mode
+    if config.trainer.compile_fullgraph is not None:
+        kwargs["fullgraph"] = config.trainer.compile_fullgraph
+    return torch.compile(model, **kwargs)
+
+
 def configure_pretrained_model_config(config: PretrainConfig, model_name_or_path: str) -> Any:
     model_config = AutoConfig.from_pretrained(model_name_or_path)
     original_max_position_embeddings = getattr(model_config, "max_position_embeddings", 0)
@@ -296,6 +327,7 @@ def main() -> None:
         torch.backends.cuda.enable_mem_efficient_sdp(True)
         torch.backends.cuda.enable_math_sdp(True)
 
+    liger_applied = maybe_apply_liger_kernel(config)
     tokenizer = load_tokenizer(config)
     model = load_or_create_model(config, tokenizer, args.resume, dtype)
     if getattr(model.config, "max_position_embeddings", 0) < config.model.block_size:
@@ -305,8 +337,7 @@ def main() -> None:
         model.config.use_cache = False
     model.to(device)
 
-    if config.trainer.compile and hasattr(torch, "compile") and device.type == "cuda":
-        model = torch.compile(model)
+    model = compile_model_if_requested(model, config, device)
 
     optimizer = make_optimizer(model, config, device)
     scheduler = make_scheduler(optimizer, config)
@@ -340,6 +371,9 @@ def main() -> None:
                 "block_size": config.model.block_size,
                 "rope_scaling": getattr(unwrap_model(model).config, "rope_scaling", None),
                 "flops_per_token_estimate": flops_per_token,
+                "liger_kernel": liger_applied,
+                "compile": config.trainer.compile,
+                "compile_mode": config.trainer.compile_mode,
             },
             ensure_ascii=True,
         ),

@@ -1,0 +1,26 @@
+name: l20-eval-math
+output_dir: data/l20_eval_math_8k
+tokenizer: AliceYin/l20-edu-135m
+target_tokens: 8192
+val_tokens: 524288
+block_size: 8192
+report_interval: 1000
+
+sources:
+  - name: finemath-4plus
+    family: math
+    kind: hf_text
+    dataset: HuggingFaceTB/finemath
+    config_name: finemath-4plus
+    split: train
+    text_column: text
+    weight: 1.0
+    min_chars: 500
+    max_chars: 45000
+    min_score: 4.0
+    min_int_score: 4
+    quality:
+      min_alpha_ratio: 0.25
+      max_digit_ratio: 0.45
+      min_unique_word_ratio: 0.08
+      max_repeated_ngram_fraction: 0.22

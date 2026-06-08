@@ -1,0 +1,113 @@
+name: l20-eval-code
+output_dir: data/l20_eval_code_8k
+tokenizer: AliceYin/l20-edu-135m
+target_tokens: 8192
+val_tokens: 524288
+block_size: 8192
+report_interval: 1000
+
+sources:
+  - name: stack-edu-python
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Python
+    split: train
+    text_column: text
+    weight: 0.35
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-javascript
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: JavaScript
+    split: train
+    text_column: text
+    weight: 0.18
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-typescript
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: TypeScript
+    split: train
+    text_column: text
+    weight: 0.12
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-cpp
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Cpp
+    split: train
+    text_column: text
+    weight: 0.12
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-rust
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Rust
+    split: train
+    text_column: text
+    weight: 0.09
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-sql
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: SQL
+    split: train
+    text_column: text
+    weight: 0.08
+    min_chars: 200
+    max_chars: 50000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-shell
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Shell
+    split: train
+    text_column: text
+    weight: 0.06
+    min_chars: 200
+    max_chars: 50000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true

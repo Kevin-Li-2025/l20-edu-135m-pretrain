@@ -56,6 +56,9 @@ class TrainerConfig:
     grad_clip: float = 1.0
     dtype: str = "bfloat16"
     compile: bool = False
+    compile_mode: str | None = None
+    compile_fullgraph: bool | None = None
+    liger_kernel: bool = False
     gradient_checkpointing: bool = False
     log_interval: int = 10
     eval_interval: int = 500
