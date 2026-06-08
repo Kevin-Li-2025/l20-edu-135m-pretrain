@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   "datasets>=2.19",
+  "boto3>=1.34",
   "numpy>=1.26",
   "pyyaml>=6.0",
   "safetensors>=0.4",
@@ -21,6 +22,7 @@ l20-generate = "l20_pretrain.generate:main"
 l20-eval-ppl = "l20_pretrain.eval_ppl:main"
 l20-sft = "l20_pretrain.train_sft:main"
 l20-prepare-shards = "l20_pretrain.prepare_shards:main"
+l20-prepare-mixture-shards = "l20_pretrain.prepare_mixture_shards:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

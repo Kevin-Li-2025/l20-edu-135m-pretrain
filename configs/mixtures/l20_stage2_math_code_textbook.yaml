@@ -1,0 +1,180 @@
+name: l20-stage2-math-code-textbook
+output_dir: data/l20_stage2_math_code_textbook_8k
+tokenizer: AliceYin/l20-edu-135m
+target_tokens: 300000000
+val_tokens: 2097152
+block_size: 8192
+report_interval: 1000
+
+# Stage-2 mixture for the 8K CPT model. Default weights:
+# - 35% math from FineMath 4+
+# - 25% educational code from Stack-Edu, permissively licensed files only
+# - 40% synthetic textbook-style data from Cosmopedia educational subsets
+sources:
+  - name: finemath-4plus
+    family: math
+    kind: hf_text
+    dataset: HuggingFaceTB/finemath
+    config_name: finemath-4plus
+    split: train
+    text_column: text
+    weight: 0.35
+    min_chars: 500
+    max_chars: 45000
+    min_score: 4.0
+    min_int_score: 4
+    quality:
+      min_alpha_ratio: 0.25
+      max_digit_ratio: 0.45
+      min_unique_word_ratio: 0.08
+      max_repeated_ngram_fraction: 0.22
+
+  - name: stack-edu-python
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Python
+    split: train
+    text_column: text
+    weight: 0.08
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-javascript
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: JavaScript
+    split: train
+    text_column: text
+    weight: 0.04
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-typescript
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: TypeScript
+    split: train
+    text_column: text
+    weight: 0.03
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-cpp
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Cpp
+    split: train
+    text_column: text
+    weight: 0.03
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-rust
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Rust
+    split: train
+    text_column: text
+    weight: 0.025
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-sql
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: SQL
+    split: train
+    text_column: text
+    weight: 0.025
+    min_chars: 200
+    max_chars: 50000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-shell
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Shell
+    split: train
+    text_column: text
+    weight: 0.02
+    min_chars: 200
+    max_chars: 50000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: cosmopedia-openstax
+    family: synthetic_textbook
+    kind: hf_text
+    dataset: HuggingFaceTB/cosmopedia
+    config_name: openstax
+    split: train
+    text_column: text
+    weight: 0.16
+    min_chars: 700
+    max_chars: 45000
+    quality:
+      min_alpha_ratio: 0.45
+      max_digit_ratio: 0.35
+      min_unique_word_ratio: 0.16
+
+  - name: cosmopedia-khanacademy
+    family: synthetic_textbook
+    kind: hf_text
+    dataset: HuggingFaceTB/cosmopedia
+    config_name: khanacademy
+    split: train
+    text_column: text
+    weight: 0.12
+    min_chars: 700
+    max_chars: 45000
+    quality:
+      min_alpha_ratio: 0.45
+      max_digit_ratio: 0.35
+      min_unique_word_ratio: 0.16
+
+  - name: cosmopedia-auto-math-text
+    family: synthetic_textbook
+    kind: hf_text
+    dataset: HuggingFaceTB/cosmopedia
+    config_name: auto_math_text
+    split: train
+    text_column: text
+    weight: 0.12
+    min_chars: 700
+    max_chars: 45000
+    quality:
+      min_alpha_ratio: 0.40
+      max_digit_ratio: 0.40
+      min_unique_word_ratio: 0.14
