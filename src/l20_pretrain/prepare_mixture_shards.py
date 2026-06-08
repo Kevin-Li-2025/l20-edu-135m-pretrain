@@ -22,7 +22,8 @@ set_default_hf_home()
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-from .data import tokenize_without_specials
+from .config import DatasetConfig
+from .data import fineweb_edu_sample_files, tokenize_without_specials
 from .prepare_shards import passes_dataset_score, write_tokens
 from .quality import code_quality_filter, normalize_code_text, normalize_text, quality_filter, stable_hash
 
@@ -122,7 +123,23 @@ def format_code_document(example: dict[str, Any], text: str, *, include_metadata
     return f"{header}\n\n```{fence}\n{text.rstrip()}\n```" if header else text
 
 
-def iter_source_examples(source: SourceSpec, *, s3_client: Any | None = None) -> Iterator[dict[str, Any]]:
+def load_streaming_dataset(source: SourceSpec) -> Any:
+    dataset_config = DatasetConfig(
+        name=source.dataset,
+        config_name=source.config_name,
+        split=source.split,
+        streaming=True,
+        shuffle_buffer=0,
+    )
+    direct_files = fineweb_edu_sample_files(dataset_config)
+    if direct_files:
+        return load_dataset(
+            "parquet",
+            data_files=direct_files,
+            split=source.split,
+            streaming=True,
+        )
+
     kwargs: dict[str, Any] = {
         "path": source.dataset,
         "split": source.split,
@@ -130,7 +147,11 @@ def iter_source_examples(source: SourceSpec, *, s3_client: Any | None = None) ->
     }
     if source.config_name:
         kwargs["name"] = source.config_name
-    dataset = load_dataset(**kwargs)
+    return load_dataset(**kwargs)
+
+
+def iter_source_examples(source: SourceSpec, *, s3_client: Any | None = None) -> Iterator[dict[str, Any]]:
+    dataset = load_streaming_dataset(source)
 
     if source.kind == "stack_edu":
         if s3_client is None:

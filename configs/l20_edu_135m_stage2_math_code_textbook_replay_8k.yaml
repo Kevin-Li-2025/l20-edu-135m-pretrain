@@ -29,8 +29,8 @@ model:
     original_max_position_embeddings: 2048
 
 trainer:
-  micro_batch_size: 2
-  gradient_accumulation_steps: 33
+  micro_batch_size: 3
+  gradient_accumulation_steps: 22
   max_steps: 555
   warmup_steps: 40
   learning_rate: 0.000012
@@ -43,7 +43,7 @@ trainer:
   compile: false
   compile_mode: null
   compile_fullgraph: null
-  liger_kernel: false
+  liger_kernel: true
   gradient_checkpointing: false
   log_interval: 1
   eval_interval: 100
