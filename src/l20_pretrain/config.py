@@ -14,6 +14,7 @@ class DatasetConfig:
     split: str = "train"
     streaming: bool = True
     text_column: str = "text"
+    tokenized_path: str | None = None
     min_chars: int = 200
     max_chars: int | None = 50000
     min_score: float | None = None
@@ -38,6 +39,7 @@ class ModelConfig:
     tie_word_embeddings: bool = False
     vocab_multiple: int = 64
     attn_implementation: str | None = "sdpa"
+    rope_scaling: dict[str, Any] | None = None
 
 
 @dataclass
@@ -61,6 +63,7 @@ class TrainerConfig:
     save_interval: int = 1000
     keep_last_checkpoints: int = 2
     num_workers: int = 0
+    mfu_peak_tflops: float | None = None
 
 
 @dataclass
@@ -69,6 +72,7 @@ class PretrainConfig:
     output_dir: str = "runs/l20-pretrain"
     seed: int = 1337
     tokenizer_name: str = "HuggingFaceTB/SmolLM2-135M"
+    init_model_name_or_path: str | None = None
     dataset: DatasetConfig = field(default_factory=DatasetConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     trainer: TrainerConfig = field(default_factory=TrainerConfig)

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
+import json
 import os
 from pathlib import Path
 import re
 from typing import Any
 
+import numpy as np
 import torch
-from torch.utils.data import IterableDataset
+from torch.utils.data import IterableDataset, get_worker_info
 
 from .config import DatasetConfig
 
@@ -99,6 +101,65 @@ class PackedTokenDataset(IterableDataset):
                 yield {"input_ids": input_ids, "labels": input_ids.clone()}
 
 
+class TokenizedBlockDataset(IterableDataset):
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        split: str,
+        block_size: int,
+        seed: int = 0,
+    ) -> None:
+        super().__init__()
+        self.root = Path(path)
+        self.split = split
+        self.block_size = block_size
+        self.seed = seed
+        self.bin_path = self.root / f"{split}.bin"
+        if not self.bin_path.exists() and split == "val":
+            self.bin_path = self.root / "train.bin"
+        if not self.bin_path.exists():
+            raise FileNotFoundError(f"Tokenized shard not found: {self.bin_path}")
+
+        self.metadata = self._load_metadata()
+        dtype_name = self.metadata.get("dtype", "uint32")
+        if dtype_name != "uint32":
+            raise ValueError(f"Unsupported tokenized dtype: {dtype_name}")
+        self.dtype = np.uint32
+        self.num_tokens = self.bin_path.stat().st_size // np.dtype(self.dtype).itemsize
+        self.num_blocks = self.num_tokens // self.block_size
+        if self.num_blocks <= 0:
+            raise ValueError(
+                f"{self.bin_path} has {self.num_tokens} tokens, fewer than block_size={self.block_size}"
+            )
+
+    def _load_metadata(self) -> dict[str, Any]:
+        metadata_path = self.root / "metadata.json"
+        if not metadata_path.exists():
+            return {}
+        with metadata_path.open("r", encoding="utf-8") as handle:
+            return json.load(handle)
+
+    def __iter__(self) -> Iterator[dict[str, torch.Tensor]]:
+        worker = get_worker_info()
+        worker_id = worker.id if worker is not None else 0
+        num_workers = worker.num_workers if worker is not None else 1
+        rng = np.random.default_rng(self.seed + worker_id * 1_000_003)
+        data = np.memmap(self.bin_path, dtype=self.dtype, mode="r")
+        block_ids = np.arange(worker_id, self.num_blocks, num_workers, dtype=np.int64)
+        if len(block_ids) == 0:
+            return
+
+        while True:
+            order = block_ids.copy()
+            rng.shuffle(order)
+            for block_id in order:
+                start = int(block_id) * self.block_size
+                block = np.asarray(data[start : start + self.block_size], dtype=np.int64)
+                input_ids = torch.from_numpy(block.copy())
+                yield {"input_ids": input_ids, "labels": input_ids.clone()}
+
+
 def collate_batch(rows: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
     return {
         "input_ids": torch.stack([row["input_ids"] for row in rows], dim=0),
@@ -177,7 +238,15 @@ def create_packed_dataset(
     tokenizer: Any,
     *,
     block_size: int,
-) -> PackedTokenDataset:
+) -> IterableDataset:
+    if config.tokenized_path:
+        return TokenizedBlockDataset(
+            config.tokenized_path,
+            split=config.split,
+            block_size=block_size,
+            seed=0,
+        )
+
     source = create_source(config)
     texts = iter_filtered_texts(
         source,

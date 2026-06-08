@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 import json
 import math
 import os
@@ -19,7 +20,7 @@ from .env import set_default_hf_home
 
 set_default_hf_home()
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
 from .config import PretrainConfig, load_config, save_config
 from .data import collate_batch, create_packed_dataset
@@ -111,9 +112,12 @@ def make_scheduler(optimizer: torch.optim.Optimizer, config: PretrainConfig) -> 
     return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
 
 
-def build_loader(config: PretrainConfig, tokenizer: Any) -> DataLoader:
+def build_loader(config: PretrainConfig, tokenizer: Any, *, split: str | None = None) -> DataLoader:
+    dataset_config = config.dataset
+    if split is not None:
+        dataset_config = replace(config.dataset, split=split)
     dataset = create_packed_dataset(
-        config.dataset,
+        dataset_config,
         tokenizer,
         block_size=config.model.block_size,
     )
@@ -193,10 +197,59 @@ def load_tokenizer(config: PretrainConfig) -> Any:
     return tokenizer
 
 
+def configure_pretrained_model_config(config: PretrainConfig, model_name_or_path: str) -> Any:
+    model_config = AutoConfig.from_pretrained(model_name_or_path)
+    original_max_position_embeddings = getattr(model_config, "max_position_embeddings", 0)
+    if config.model.rope_scaling:
+        rope_scaling = dict(config.model.rope_scaling)
+        rope_scaling.setdefault("factor", config.model.block_size / max(1, original_max_position_embeddings))
+        if rope_scaling.get("rope_type") in {"yarn", "longrope", "llama3", "dynamic"}:
+            rope_scaling.setdefault("original_max_position_embeddings", original_max_position_embeddings)
+        model_config.rope_scaling = rope_scaling
+    if original_max_position_embeddings < config.model.block_size:
+        model_config.max_position_embeddings = config.model.block_size
+    if hasattr(model_config, "rope_theta"):
+        model_config.rope_theta = config.model.rope_theta
+    if config.model.attn_implementation:
+        model_config._attn_implementation = config.model.attn_implementation
+    return model_config
+
+
 def load_or_create_model(config: PretrainConfig, tokenizer: Any, resume: str | None, dtype: torch.dtype) -> torch.nn.Module:
+    load_kwargs: dict[str, Any] = {"torch_dtype": dtype}
+    if config.model.attn_implementation:
+        load_kwargs["attn_implementation"] = config.model.attn_implementation
     if resume:
-        return AutoModelForCausalLM.from_pretrained(resume, torch_dtype=dtype)
+        load_kwargs["config"] = configure_pretrained_model_config(config, resume)
+        return AutoModelForCausalLM.from_pretrained(resume, **load_kwargs)
+    if config.init_model_name_or_path:
+        load_kwargs["config"] = configure_pretrained_model_config(config, config.init_model_name_or_path)
+        return AutoModelForCausalLM.from_pretrained(config.init_model_name_or_path, **load_kwargs)
     return build_model(config.model, tokenizer)
+
+
+def estimate_flops_per_token(config: PretrainConfig, parameter_count: int) -> int:
+    head_dim = config.model.hidden_size // config.model.num_attention_heads
+    attention_flops = (
+        12
+        * config.model.num_hidden_layers
+        * config.model.num_attention_heads
+        * head_dim
+        * config.model.block_size
+    )
+    return int(6 * parameter_count + attention_flops)
+
+
+def estimate_mfu(
+    *,
+    tokens_per_sec: float,
+    flops_per_token: int,
+    peak_tflops: float | None,
+) -> float | None:
+    if not peak_tflops or peak_tflops <= 0:
+        return None
+    achieved_tflops = tokens_per_sec * flops_per_token / 1e12
+    return achieved_tflops / peak_tflops
 
 
 @torch.no_grad()
@@ -208,7 +261,8 @@ def evaluate(
     dtype: torch.dtype,
 ) -> float:
     model.eval()
-    loader = build_loader(config, tokenizer)
+    split = "val" if config.dataset.tokenized_path else None
+    loader = build_loader(config, tokenizer, split=split)
     iterator = iter(loader)
     losses: list[float] = []
     for _ in range(config.trainer.eval_batches):
@@ -237,9 +291,15 @@ def main() -> None:
     if device.type == "cuda":
         torch.set_float32_matmul_precision("high")
         torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cuda.enable_flash_sdp(True)
+        torch.backends.cuda.enable_mem_efficient_sdp(True)
+        torch.backends.cuda.enable_math_sdp(True)
 
     tokenizer = load_tokenizer(config)
     model = load_or_create_model(config, tokenizer, args.resume, dtype)
+    if getattr(model.config, "max_position_embeddings", 0) < config.model.block_size:
+        model.config.max_position_embeddings = config.model.block_size
     if config.trainer.gradient_checkpointing:
         model.gradient_checkpointing_enable()
         model.config.use_cache = False
@@ -262,6 +322,8 @@ def main() -> None:
     loader = build_loader(config, tokenizer)
     iterator = iter(loader)
     model.train()
+    parameter_count = count_parameters(unwrap_model(model))
+    flops_per_token = estimate_flops_per_token(config, parameter_count)
 
     print(
         json.dumps(
@@ -270,10 +332,14 @@ def main() -> None:
                 "run_name": config.run_name,
                 "device": str(device),
                 "dtype": config.trainer.dtype,
-                "parameters": count_parameters(unwrap_model(model)),
+                "parameters": parameter_count,
                 "tokens_per_step": config.tokens_per_step,
                 "planned_tokens": config.planned_tokens,
                 "start_step": start_step,
+                "init_model_name_or_path": config.init_model_name_or_path,
+                "block_size": config.model.block_size,
+                "rope_scaling": getattr(unwrap_model(model).config, "rope_scaling", None),
+                "flops_per_token_estimate": flops_per_token,
             },
             ensure_ascii=True,
         ),
@@ -309,18 +375,26 @@ def main() -> None:
             last_log = now
             last_log_step = step
             tokens_per_log = config.tokens_per_step * steps_since_log
+            tokens_per_sec = tokens_per_log / elapsed
+            mfu = estimate_mfu(
+                tokens_per_sec=tokens_per_sec,
+                flops_per_token=flops_per_token,
+                peak_tflops=config.trainer.mfu_peak_tflops,
+            )
+            payload: dict[str, Any] = {
+                "event": "train",
+                "step": step,
+                "loss": total_loss / config.trainer.gradient_accumulation_steps,
+                "lr": scheduler.get_last_lr()[0],
+                "tokens": step * config.tokens_per_step,
+                "tokens_per_sec_window": tokens_per_sec,
+                "step_time_sec_window": elapsed / steps_since_log,
+            }
+            if mfu is not None:
+                payload["mfu"] = mfu
+                payload["mfu_pct"] = 100.0 * mfu
             print(
-                json.dumps(
-                    {
-                        "event": "train",
-                        "step": step,
-                        "loss": total_loss / config.trainer.gradient_accumulation_steps,
-                        "lr": scheduler.get_last_lr()[0],
-                        "tokens": step * config.tokens_per_step,
-                        "tokens_per_sec_window": tokens_per_log / elapsed,
-                    },
-                    ensure_ascii=True,
-                ),
+                json.dumps(payload, ensure_ascii=True),
                 flush=True,
             )
 

@@ -1,0 +1,55 @@
+run_name: l20-edu-135m-continue-smoke
+output_dir: runs/l20-edu-135m-continue-smoke
+seed: 20260608
+tokenizer_name: AliceYin/l20-edu-135m
+init_model_name_or_path: AliceYin/l20-edu-135m
+
+dataset:
+  name: local-smoke
+  config_name:
+  split: train
+  streaming: true
+  text_column: text
+  min_chars: 1
+  max_chars: 50000
+  min_score:
+  min_int_score:
+  append_eos: true
+  shuffle_buffer: 0
+  max_docs:
+  local_text_path: data/continue_smoke.txt
+
+model:
+  block_size: 128
+  hidden_size: 576
+  intermediate_size: 1536
+  num_hidden_layers: 30
+  num_attention_heads: 9
+  num_key_value_heads: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 0.000001
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+
+trainer:
+  micro_batch_size: 1
+  gradient_accumulation_steps: 1
+  max_steps: 1
+  warmup_steps: 1
+  learning_rate: 0.00004
+  min_lr_ratio: 0.25
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  gradient_checkpointing: true
+  log_interval: 1
+  eval_interval: 0
+  eval_batches: 0
+  save_interval: 1
+  keep_last_checkpoints: 1
+  num_workers: 0

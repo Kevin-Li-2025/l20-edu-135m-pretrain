@@ -2,18 +2,26 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+*.py[cod]
+*.log
+*.out
+*.err
+*.core
+core
+core.*
 .venv/
 venv/
 *.egg-info/
 
 runs/
 checkpoints/
-data/
+logs/
 wandb/
 eval_results/
-logs/
 *.pt
 *.pth
 *.safetensors
+data/*.bin
+data/*/
 
 .DS_Store
