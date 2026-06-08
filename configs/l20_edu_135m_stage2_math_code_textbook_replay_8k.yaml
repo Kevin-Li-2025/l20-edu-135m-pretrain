@@ -31,10 +31,10 @@ model:
 trainer:
   micro_batch_size: 3
   gradient_accumulation_steps: 22
-  max_steps: 555
-  warmup_steps: 40
-  learning_rate: 0.000012
-  min_lr_ratio: 0.2
+  max_steps: 1850
+  warmup_steps: 100
+  learning_rate: 0.000010
+  min_lr_ratio: 0.15
   weight_decay: 0.1
   beta1: 0.9
   beta2: 0.95

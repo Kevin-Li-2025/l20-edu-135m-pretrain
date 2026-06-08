@@ -14,12 +14,12 @@ bash scripts/train_l20_stage2_math_code_textbook_replay_8k.sh
 Default recipe:
 
 - 20% Stage-1 high-quality edu replay from `data/l20_edu_hq_8k`
-- 30% fresh FineWeb-Edu `sample-10BT`, score >= 4
+- 35% SmolLM-Corpus FineWeb-Edu-Dedup, score >= 4
 - 20% FineMath `finemath-4plus`
-- 24% Stack-Edu permissive code
-- 6% Cosmopedia textbook-style data
+- 20% Stack-Edu permissive code
+- 5% SmolLM-Corpus Cosmopedia v2 textbook-style data
 
-Replay and fresh educational web are deliberately kept as half the mixture to reduce distribution drift during continued pretraining. Synthetic textbook data is kept small because the current step-400 probe already showed repetition; the goal is to use it as high-density style/curriculum data, not as the dominant distribution.
+This run is now sized at 1,000,000,000 train tokens plus 4,194,304 validation tokens. Replay and deduplicated educational web are deliberately kept as more than half the mixture to reduce distribution drift during continued pretraining. Synthetic textbook data is kept small because the current step-400 probe already showed repetition; the goal is to use it as high-density style/curriculum data, not as the dominant distribution.
 
 ## Why This Mix
 
@@ -30,7 +30,7 @@ This follows the common pattern in strong recent recipes:
 - FineWeb/FineWeb-Edu: strong web data comes from aggressive filtering and educational-quality scoring.
 - Qwen2.5-Coder: code-focused training preserves text and math in the mixture instead of training on code alone.
 
-For this 135M model, the practical version is high-quality edu web/replay as the base, math/code as capability injectors, and small synthetic textbook exposure to avoid repetitive generated style.
+For this 135M model, the practical version is high-quality edu web/replay as the base, math/code as capability injectors, and small synthetic textbook exposure to avoid repetitive generated style. A strict Chinchilla-style from-scratch target would be roughly 2.7B tokens for 135M parameters, while modern small models such as SmolLM2 deliberately overtrain far beyond that; the 1B Stage-2 target is the largest practical single-L20 step here without turning preparation and training into a multi-day job.
 
 ## Speed Benchmark
 
@@ -64,6 +64,8 @@ Latest L20 short benchmark for the Stage-2 config:
 
 Production Stage-2 should use Liger microbatch 3 with gradient accumulation 22. This preserves the same 540,672 tokens/step as the previous microbatch-2 setup while improving measured throughput and leaving large memory headroom.
 
+At 540,672 tokens/step, the 1B-token Stage-2 run uses 1,850 optimizer steps. The latest Liger microbatch-3 benchmark measured about 20.2k train tokens/sec on this L20, so pure training time is roughly 14 hours before eval/checkpoint overhead.
+
 ## Quality Benchmark
 
 Prepare domain validation shards:
@@ -89,7 +91,7 @@ Do not select a Stage-2 data mix by total validation loss alone. A mix that impr
 
 ## Ablation Ladder
 
-Before scaling to 300M+ Stage-2 tokens, run 50M-token pilots:
+Before scaling future 2B+ Stage-2 tokens, run 50M-token pilots:
 
 - current no-replay recipe
 - elite replay recipe
@@ -105,6 +107,10 @@ Select by domain PPL plus downstream evals, not only by training loss.
 - Continued pretraining replay and LR schedules: https://arxiv.org/abs/2403.08763
 - DCLM data curation and model-based filtering: https://arxiv.org/abs/2406.11794
 - FineWeb/FineWeb-Edu filtering: https://arxiv.org/abs/2406.17557
+- SmolLM-Corpus: https://huggingface.co/datasets/HuggingFaceTB/smollm-corpus
+- DeepSeek-V3 technical report: https://arxiv.org/abs/2412.19437
+- DeepSeek-Coder technical report: https://arxiv.org/abs/2401.14196
+- DeepSeekMath technical report: https://arxiv.org/abs/2402.03300
 - SmolLM2 data-centric recipe: https://arxiv.org/abs/2502.02737
 - Qwen2.5 technical report: https://arxiv.org/abs/2412.15115
 - Qwen2.5-Coder technical report: https://arxiv.org/abs/2409.12186

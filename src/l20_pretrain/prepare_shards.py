@@ -54,12 +54,18 @@ def get_text(example: Any, text_column: str) -> str | None:
 def passes_dataset_score(example: Any, *, min_score: float | None, min_int_score: int | None) -> bool:
     if not isinstance(example, dict):
         return True
+    metadata = example.get("metadata")
+    metadata = metadata if isinstance(metadata, dict) else {}
     if min_score is not None:
         score = example.get("score")
+        if score is None:
+            score = metadata.get("score")
         if score is not None and float(score) < min_score:
             return False
     if min_int_score is not None:
         int_score = example.get("int_score")
+        if int_score is None:
+            int_score = metadata.get("int_score")
         if int_score is not None and int(int_score) < min_int_score:
             return False
     return True

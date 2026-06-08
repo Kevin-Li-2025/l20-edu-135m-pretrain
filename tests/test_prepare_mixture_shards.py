@@ -3,6 +3,7 @@ from collections import Counter
 import numpy as np
 
 from l20_pretrain.prepare_mixture_shards import SourceSpec, copy_tokenized_replay_source
+from l20_pretrain.prepare_shards import passes_dataset_score
 from l20_pretrain.quality import normalize_code_text
 
 
@@ -50,3 +51,11 @@ def test_copy_tokenized_replay_source_writes_quota(tmp_path) -> None:
     assert source_tokens["edu-replay"] == 20
     assert counters["tokenized_replay_chunks"] > 0
     assert source_counter["train_kept"] > 0
+
+
+def test_passes_dataset_score_reads_nested_metadata() -> None:
+    example = {"text": "x", "metadata": {"score": 4.2, "int_score": 4}}
+
+    assert passes_dataset_score(example, min_score=4.0, min_int_score=4)
+    assert not passes_dataset_score(example, min_score=4.5, min_int_score=4)
+    assert not passes_dataset_score(example, min_score=4.0, min_int_score=5)

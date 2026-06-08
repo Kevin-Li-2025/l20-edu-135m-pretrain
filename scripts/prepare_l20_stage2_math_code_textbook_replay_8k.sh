@@ -9,8 +9,8 @@ export HF_HUB_ETAG_TIMEOUT="${HF_HUB_ETAG_TIMEOUT:-60}"
 export PYTHONUNBUFFERED=1
 
 RECIPE="${RECIPE:-configs/mixtures/l20_stage2_math_code_textbook_replay.yaml}"
-TARGET_TOKENS="${TARGET_TOKENS:-300000000}"
-VAL_TOKENS="${VAL_TOKENS:-2097152}"
+TARGET_TOKENS="${TARGET_TOKENS:-1000000000}"
+VAL_TOKENS="${VAL_TOKENS:-4194304}"
 OUTPUT_DIR="${OUTPUT_DIR:-data/l20_stage2_math_code_textbook_replay_8k}"
 
 if [ ! -f "data/l20_edu_hq_8k/train.bin" ]; then
