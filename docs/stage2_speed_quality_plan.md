@@ -11,6 +11,16 @@ bash scripts/prepare_l20_stage2_math_code_textbook_replay_8k.sh
 bash scripts/train_l20_stage2_math_code_textbook_replay_8k.sh
 ```
 
+For unattended recovery and future pretraining stages, use the autopilot wrapper:
+
+```bash
+bash scripts/run_pretraining_autopilot.sh
+```
+
+The autopilot reads `configs/pretraining_autopilot.yaml`, waits if another
+pretraining process is already active, skips completed data/training stages, and
+resumes training from the latest checkpoint when needed.
+
 Default recipe:
 
 - 20% Stage-1 high-quality edu replay from `data/l20_edu_hq_8k`

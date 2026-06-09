@@ -1,0 +1,10 @@
+name: l20-pretraining-autopilot
+poll_seconds: 600
+stages:
+  - name: stage2_replay_ultra_8k_1b
+    enabled: true
+    data_dir: data/l20_stage2_math_code_textbook_replay_8k
+    train_config: configs/l20_edu_135m_stage2_math_code_textbook_replay_8k.yaml
+    prepare_script: scripts/prepare_l20_stage2_math_code_textbook_replay_8k.sh
+    train_script: scripts/train_l20_stage2_math_code_textbook_replay_8k.sh
+    log_prefix: stage2_replay_ultra_8k_1b
