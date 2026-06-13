@@ -1,0 +1,182 @@
+name: l20-stage3-ultra-clean-dclm-fwe-replay
+output_dir: data/l20_stage3_dclm_edu_replay_8k
+tokenizer: AliceYin/l20-edu-135m
+target_tokens: 10000000000
+val_tokens: 4194304
+block_size: 8192
+report_interval: 1000
+
+# Stage 3 targets the current gap to SmolLM/SmolLM2 on commonsense and
+# language-understanding tasks. Research signals:
+# - DataComp-LM: model-based filtering is a key lever for high-quality web data.
+# - FineWeb-Edu: educational-quality filtering improves reasoning/knowledge tasks.
+# - SmolLM2: FineWeb-Edu + DCLM is the strongest open small-model web backbone.
+#
+# This is a large single-GPU continual-pretraining run. It uses strict
+# educational-quality filtering, exact deduplication, replay to reduce drift,
+# and small math/code/textbook tails to preserve Stage 2 gains.
+sources:
+  - name: dclm-edu-3plus
+    family: edu_web
+    kind: hf_text
+    dataset: HuggingFaceTB/dclm-edu
+    data_path: data
+    split: train
+    text_column: text
+    max_files: 2
+    file_offset: 0
+    cache_files_locally: true
+    weight: 0.18
+    min_chars: 700
+    max_chars: 45000
+    min_score: 3.0
+    min_int_score: 3
+    quality:
+      min_alpha_ratio: 0.48
+      max_digit_ratio: 0.28
+      min_unique_word_ratio: 0.18
+      max_repeated_ngram_fraction: 0.16
+
+  - name: smollm-fineweb-edu-dedup-4plus
+    family: edu_web
+    kind: hf_text
+    dataset: HuggingFaceTB/smollm-corpus
+    config_name: fineweb-edu-dedup
+    split: train
+    text_column: text
+    max_files: 8
+    file_offset: 0
+    cache_files_locally: true
+    weight: 0.51
+    min_chars: 700
+    max_chars: 45000
+    min_score: 4.0
+    min_int_score: 4
+    quality:
+      min_alpha_ratio: 0.48
+      max_digit_ratio: 0.28
+      min_unique_word_ratio: 0.18
+      max_repeated_ngram_fraction: 0.16
+
+  - name: edu-hq-replay
+    family: edu_replay
+    kind: tokenized_replay
+    tokenized_path: data/l20_edu_hq_8k
+    tokenized_split: train
+    weight: 0.10
+    sample_seed: 20260611
+
+  - name: smollm-cosmopedia-v2
+    family: synthetic_textbook
+    kind: hf_text
+    dataset: HuggingFaceTB/smollm-corpus
+    config_name: cosmopedia-v2
+    split: train
+    text_column: text
+    max_files: 2
+    file_offset: 0
+    cache_files_locally: true
+    weight: 0.05
+    min_chars: 700
+    max_chars: 45000
+    quality:
+      min_alpha_ratio: 0.45
+      max_digit_ratio: 0.35
+      min_unique_word_ratio: 0.16
+      max_repeated_ngram_fraction: 0.18
+
+  - name: finemath-4plus
+    family: math
+    kind: hf_text
+    dataset: HuggingFaceTB/finemath
+    config_name: finemath-4plus
+    split: train
+    text_column: text
+    max_files: 16
+    file_offset: 0
+    cache_files_locally: true
+    weight: 0.12
+    min_chars: 500
+    max_chars: 45000
+    min_score: 4.0
+    min_int_score: 4
+    quality:
+      min_alpha_ratio: 0.25
+      max_digit_ratio: 0.45
+      min_unique_word_ratio: 0.08
+      max_repeated_ngram_fraction: 0.22
+
+  - name: stack-edu-python
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Python
+    split: train
+    text_column: text
+    weight: 0.02
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-javascript
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: JavaScript
+    split: train
+    text_column: text
+    weight: 0.008
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-typescript
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: TypeScript
+    split: train
+    text_column: text
+    weight: 0.005
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-cpp
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Cpp
+    split: train
+    text_column: text
+    weight: 0.004
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true
+
+  - name: stack-edu-rust
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Rust
+    split: train
+    text_column: text
+    weight: 0.003
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true

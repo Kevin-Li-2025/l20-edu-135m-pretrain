@@ -1,0 +1,54 @@
+name: l20-stage4-hq-crossdedup-smoke
+output_dir: data/l20_stage4_hq_crossdedup_smoke
+tokenizer: AliceYin/l20-edu-135m
+target_tokens: 300000
+val_tokens: 8192
+block_size: 8192
+report_interval: 10
+
+data_guard:
+  enabled: true
+  index_path: data/l20_stage4_hq_crossdedup_smoke/cross_source_guard.sqlite
+  similarity_threshold: 0.82
+  max_duplicate_segment_fraction: 0.30
+  contamination_path: data/benchmark_contamination/eval_5tasks.jsonl
+  contamination_ngram: 13
+  contamination_lcs_threshold: 0.60
+
+sources:
+  - name: dolmino-wikipedia-smoke
+    family: encyclopedia
+    kind: hf_text
+    dataset: allenai/dolmino-mix-1124
+    repo_files:
+      - data/wiki/wiki-0000.json.gz
+    text_column: text
+    weight: 0.50
+    min_chars: 300
+    max_chars: 12000
+    unique_tokens_estimate: 3700000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.45
+      max_digit_ratio: 0.30
+      min_unique_word_ratio: 0.14
+      max_repeated_ngram_fraction: 0.18
+
+  - name: mixturevitae-math-smoke
+    family: structured_synthetic
+    kind: hf_text
+    dataset: ontocord/MixtureVitae-v1
+    repo_files:
+      - data/math/math_word_problems-0.jsonl.gz
+    text_column: text
+    document_separator: <|endoftext|>
+    weight: 0.50
+    min_chars: 200
+    max_chars: 12000
+    unique_tokens_estimate: 1000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.20
+      max_digit_ratio: 0.55
+      min_unique_word_ratio: 0.08
+      max_repeated_ngram_fraction: 0.25

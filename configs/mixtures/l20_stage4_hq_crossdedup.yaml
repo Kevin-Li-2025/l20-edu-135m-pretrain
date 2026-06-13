@@ -1,0 +1,204 @@
+name: l20-stage4-hq-crossdedup
+output_dir: data/l20_stage4_hq_crossdedup_8k
+tokenizer: AliceYin/l20-edu-135m
+target_tokens: 3000000000
+val_tokens: 4194304
+block_size: 8192
+report_interval: 1000
+
+data_guard:
+  enabled: true
+  index_path: data/l20_stage4_hq_crossdedup_8k/cross_source_guard.sqlite
+  similarity_threshold: 0.82
+  max_duplicate_segment_fraction: 0.30
+  contamination_path: data/benchmark_contamination/eval_5tasks.jsonl
+  contamination_ngram: 13
+  contamination_lcs_threshold: 0.60
+
+sources:
+  - name: fineweb-edu-3plus
+    family: edu_web
+    kind: hf_text
+    dataset: HuggingFaceFW/fineweb-edu
+    config_name: sample-350BT
+    split: train
+    text_column: text
+    weight: 0.40
+    min_chars: 700
+    max_chars: 45000
+    min_score: 3.0
+    min_int_score: 3
+    unique_tokens_estimate: 350000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.48
+      max_digit_ratio: 0.28
+      min_unique_word_ratio: 0.18
+      max_repeated_ngram_fraction: 0.16
+
+  - name: dclm-edu-3plus-new-shards
+    family: edu_web
+    kind: hf_text
+    dataset: HuggingFaceTB/dclm-edu
+    data_path: data
+    split: train
+    text_column: text
+    max_files: 16
+    file_offset: 2
+    cache_files_locally: false
+    weight: 0.30
+    min_chars: 700
+    max_chars: 45000
+    min_score: 3.0
+    min_int_score: 3
+    unique_tokens_estimate: 3800000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.48
+      max_digit_ratio: 0.28
+      min_unique_word_ratio: 0.18
+      max_repeated_ngram_fraction: 0.16
+
+  - name: edu-hq-replay
+    family: edu_replay
+    kind: tokenized_replay
+    tokenized_path: data/l20_edu_hq_8k
+    tokenized_split: train
+    weight: 0.10
+    max_epochs: 4.0
+    sample_seed: 20260612
+
+  - name: dolmino-pes2o
+    family: scientific_text
+    kind: hf_text
+    dataset: allenai/dolmino-mix-1124
+    repo_files:
+      - data/pes2o/pes2o-0000.json.gz
+    text_column: text
+    weight: 0.07
+    min_chars: 800
+    max_chars: 45000
+    unique_tokens_estimate: 58600000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.45
+      max_digit_ratio: 0.32
+      min_unique_word_ratio: 0.16
+      max_repeated_ngram_fraction: 0.16
+
+  - name: dolmino-wikipedia
+    family: encyclopedia
+    kind: hf_text
+    dataset: allenai/dolmino-mix-1124
+    repo_files:
+      - data/wiki/wiki-0000.json.gz
+    text_column: text
+    weight: 0.05
+    min_chars: 600
+    max_chars: 45000
+    unique_tokens_estimate: 3700000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.48
+      max_digit_ratio: 0.28
+      min_unique_word_ratio: 0.16
+      max_repeated_ngram_fraction: 0.16
+
+  - name: dolmino-stackexchange
+    family: explanatory_qa
+    kind: hf_text
+    dataset: allenai/dolmino-mix-1124
+    repo_files:
+      - data/stackexchange/stackexchange-0000.json.gz
+      - data/stackexchange/stackexchange-0001.json.gz
+    text_column: text
+    weight: 0.03
+    min_chars: 400
+    max_chars: 45000
+    unique_tokens_estimate: 1260000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.40
+      max_digit_ratio: 0.35
+      min_unique_word_ratio: 0.14
+      max_repeated_ngram_fraction: 0.18
+
+  - name: finemath-4plus
+    family: math
+    kind: hf_text
+    dataset: HuggingFaceTB/finemath
+    config_name: finemath-4plus
+    split: train
+    text_column: text
+    max_files: 8
+    file_offset: 16
+    cache_files_locally: false
+    weight: 0.03
+    min_chars: 500
+    max_chars: 45000
+    min_score: 4.0
+    min_int_score: 4
+    unique_tokens_estimate: 10000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.25
+      max_digit_ratio: 0.45
+      min_unique_word_ratio: 0.08
+      max_repeated_ngram_fraction: 0.22
+
+  - name: mixturevitae-formatted-tutorials
+    family: structured_synthetic
+    kind: hf_text
+    dataset: ontocord/MixtureVitae-v1
+    repo_files:
+      - data/formatted_text/formatted_text-0.jsonl.gz
+    text_column: text
+    document_separator: <|endoftext|>
+    weight: 0.007
+    min_chars: 500
+    max_chars: 45000
+    unique_tokens_estimate: 12000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.40
+      max_digit_ratio: 0.35
+      min_unique_word_ratio: 0.14
+      max_repeated_ngram_fraction: 0.18
+
+  - name: mixturevitae-math-word-problems
+    family: structured_synthetic
+    kind: hf_text
+    dataset: ontocord/MixtureVitae-v1
+    repo_files:
+      - data/math/math_word_problems-0.jsonl.gz
+    text_column: text
+    document_separator: <|endoftext|>
+    weight: 0.006
+    min_chars: 300
+    max_chars: 30000
+    unique_tokens_estimate: 1000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.30
+      max_digit_ratio: 0.45
+      min_unique_word_ratio: 0.10
+      max_repeated_ngram_fraction: 0.20
+
+  - name: mixturevitae-reasoning
+    family: structured_synthetic
+    kind: hf_text
+    dataset: ontocord/MixtureVitae-v1
+    repo_files:
+      - data/synthetic_instruct/glaiveai-reasoning-0.jsonl.gz
+    text_column: text
+    document_separator: <|endoftext|>
+    weight: 0.007
+    min_chars: 500
+    max_chars: 45000
+    unique_tokens_estimate: 30000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.35
+      max_digit_ratio: 0.40
+      min_unique_word_ratio: 0.12
+      max_repeated_ngram_fraction: 0.20

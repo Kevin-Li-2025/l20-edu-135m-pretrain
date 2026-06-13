@@ -11,6 +11,17 @@ from torch.utils.data import IterableDataset
 from .data import tokenize_without_specials
 
 IGNORE_INDEX = -100
+CHAT_TEMPLATE = (
+    "{% for message in messages %}"
+    "{% if loop.first and messages[0]['role'] != 'system' %}"
+    "{{ '<|im_start|>system\\nYou are a helpful, accurate, concise AI assistant."
+    "<|im_end|>\\n' }}"
+    "{% endif %}"
+    "{{ '<|im_start|>' + message['role'] + '\\n' + message['content'] "
+    "+ '<|im_end|>\\n' }}"
+    "{% endfor %}"
+    "{% if add_generation_prompt %}{{ '<|im_start|>assistant\\n' }}{% endif %}"
+)
 
 
 def iter_local_jsonl(path: str | Path) -> Iterator[dict[str, Any]]:
@@ -158,48 +169,73 @@ def encode_sft_example(
     response_column: str = "response",
     system_prompt: str | None = None,
 ) -> dict[str, torch.Tensor] | None:
-    rendered = render_sft_example(
-        example,
-        messages_column=messages_column,
-        instruction_column=instruction_column,
-        input_column=input_column,
-        output_column=output_column,
-        prompt_column=prompt_column,
-        response_column=response_column,
-        system_prompt=system_prompt,
-    )
-    if rendered is None:
+    if not isinstance(example, dict):
         return None
 
-    prompt, response = rendered
-    prompt_ids = tokenize_without_specials(tokenizer, prompt)
-    response_ids = tokenize_without_specials(tokenizer, response)
+    messages = _parse_messages(example.get(messages_column))
+    if not messages:
+        instruction = _text(example.get(instruction_column)) or _text(example.get(prompt_column))
+        extra_input = _text(example.get(input_column))
+        response = _text(example.get(output_column)) or _text(example.get(response_column))
+        if not instruction or not response:
+            return None
+        user_content = instruction if not extra_input else f"{instruction}\n\n{extra_input}"
+        messages = [
+            {"role": "user", "content": user_content},
+            {"role": "assistant", "content": response},
+        ]
+
+    if system_prompt and messages[0]["role"] != "system":
+        messages = [{"role": "system", "content": system_prompt.strip()}, *messages]
+
+    input_ids: list[int] = []
+    labels: list[int] = []
+    for message in messages:
+        role = message["role"]
+        if role not in {"system", "user", "assistant"}:
+            continue
+        segment = (
+            f"<|im_start|>{role}\n"
+            f"{message['content'].strip()}<|im_end|>\n"
+        )
+        segment_ids = tokenize_without_specials(tokenizer, segment)
+        if not segment_ids:
+            continue
+        input_ids.extend(segment_ids)
+        if train_on_prompt or role == "assistant":
+            labels.extend(segment_ids)
+        else:
+            labels.extend([IGNORE_INDEX] * len(segment_ids))
+
+    if not input_ids:
+        return None
+
     eos_token_id = getattr(tokenizer, "eos_token_id", None)
     if eos_token_id is not None:
-        response_ids = [*response_ids, int(eos_token_id)]
-    if not response_ids:
-        return None
-
-    input_ids = [*prompt_ids, *response_ids]
-    if train_on_prompt:
-        labels = input_ids.copy()
-    else:
-        labels = [IGNORE_INDEX] * len(prompt_ids) + response_ids.copy()
+        input_ids.append(int(eos_token_id))
+        labels.append(int(eos_token_id))
 
     input_ids = input_ids[:block_size]
     labels = labels[:block_size]
     if not any(label != IGNORE_INDEX for label in labels):
         return None
 
+    if eos_token_id is not None:
+        supervised = [idx for idx, label in enumerate(labels) if label != IGNORE_INDEX]
+        if supervised:
+            last = supervised[-1]
+            input_ids[last] = int(eos_token_id)
+            labels[last] = int(eos_token_id)
+
     attention_mask = [1] * len(input_ids)
     pad_token_id = getattr(tokenizer, "pad_token_id", None)
     if pad_token_id is None:
         pad_token_id = eos_token_id if eos_token_id is not None else 0
-    padding = block_size - len(input_ids)
-    if padding > 0:
+    if len(input_ids) < block_size:
+        padding = block_size - len(input_ids)
         input_ids.extend([int(pad_token_id)] * padding)
-        labels.extend([IGNORE_INDEX] * padding)
         attention_mask.extend([0] * padding)
+        labels.extend([IGNORE_INDEX] * padding)
 
     return {
         "input_ids": torch.tensor(input_ids, dtype=torch.long),
@@ -268,8 +304,21 @@ class SFTTokenDataset(IterableDataset):
 
 
 def collate_sft_batch(rows: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:
+    max_length = max(int(row["input_ids"].shape[0]) for row in rows)
+    padded_length = ((max_length + 7) // 8) * 8
+
+    def pad(tensor: torch.Tensor, value: int) -> torch.Tensor:
+        padding = padded_length - int(tensor.shape[0])
+        if padding <= 0:
+            return tensor
+        return torch.nn.functional.pad(tensor, (0, padding), value=value)
+
     return {
-        "input_ids": torch.stack([row["input_ids"] for row in rows], dim=0),
-        "attention_mask": torch.stack([row["attention_mask"] for row in rows], dim=0),
-        "labels": torch.stack([row["labels"] for row in rows], dim=0),
+        "input_ids": torch.stack([pad(row["input_ids"], 0) for row in rows], dim=0),
+        "attention_mask": torch.stack(
+            [pad(row["attention_mask"], 0) for row in rows], dim=0
+        ),
+        "labels": torch.stack(
+            [pad(row["labels"], IGNORE_INDEX) for row in rows], dim=0
+        ),
     }

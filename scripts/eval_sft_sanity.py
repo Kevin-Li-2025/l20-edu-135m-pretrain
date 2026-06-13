@@ -68,14 +68,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def format_prompt(system_prompt: str, instruction: str) -> str:
-    return f"""### System:
-{system_prompt}
-
-### Instruction:
-{instruction}
-
-### Response:
-"""
+    return (
+        f"<|im_start|>system\n{system_prompt}<|im_end|>\n"
+        f"<|im_start|>user\n{instruction}<|im_end|>\n"
+        "<|im_start|>assistant\n"
+    )
 
 
 def response_only(prompt: str, text: str) -> str:
@@ -167,8 +164,8 @@ def main() -> None:
             generation_kwargs["top_p"] = args.top_p
         with torch.no_grad():
             output = model.generate(**inputs, **generation_kwargs)
-        decoded = tokenizer.decode(output[0], skip_special_tokens=True)
-        response = response_only(prompt, decoded)
+        generated = output[0, inputs["input_ids"].shape[1] :]
+        response = tokenizer.decode(generated, skip_special_tokens=True).strip()
         row = {
             "id": item["id"],
             "instruction": item["instruction"],
