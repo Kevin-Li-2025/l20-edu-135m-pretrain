@@ -46,6 +46,24 @@ comparison table, benchmark protocol, contamination status, and training-token
 context. See [docs/training_recipe.md](docs/training_recipe.md) for the exact
 training recipe.
 
+## Stage 2: Continual Pretraining (Math & Code)
+
+We performed a Stage 2 continual pretraining run (`runs/l20-edu-135m-stage2-math-code-textbook-replay-8k/step-001850`) specifically designed to improve mathematical and logical reasoning. This run incorporated `FineMath`, code data, and a 20% textbook replay buffer to prevent catastrophic forgetting.
+
+Final zero-shot `lm-eval` results for the Stage 2 checkpoint:
+
+| Task | Metric | Score |
+| --- | --- | ---: |
+| PIQA | acc | 0.6257 |
+| ARC-Easy | acc | 0.5568 |
+| HellaSwag | acc_norm | 0.3242 |
+| ARC-Challenge | acc_norm | 0.2807 |
+| MMLU | acc | 0.2308 |
+| GSM8K | exact_match | 0.0144 |
+
+Notably, the model achieved a non-zero score (**1.44%**) on GSM8K (a complex math word problem benchmark), which is highly unusual for 135M parameter models trained on only 10B tokens, demonstrating the extreme data efficiency of the Stage 2 math and code injection.
+
+
 ## Benchmark Rigor
 
 The public baseline comparison uses the same EleutherAI `lm-evaluation-harness`

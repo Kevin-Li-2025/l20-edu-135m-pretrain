@@ -1,0 +1,51 @@
+run_name: l20-edu-135m-stage4-smoke
+output_dir: runs/l20-edu-135m-stage4-smoke
+seed: 20260612
+tokenizer_name: AliceYin/l20-edu-135m
+init_model_name_or_path: runs/l20-edu-135m-stage3-dclm-edu-replay-8k/final
+dataset:
+  tokenized_path: data/l20_stage4_hq_crossdedup_8k
+  split: train
+  text_column: text
+  append_eos: true
+model:
+  block_size: 8192
+  hidden_size: 576
+  intermediate_size: 1536
+  num_hidden_layers: 30
+  num_attention_heads: 9
+  num_key_value_heads: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 1.0e-06
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+  rope_scaling:
+    rope_type: yarn
+    factor: 4.0
+    original_max_position_embeddings: 2048
+trainer:
+  micro_batch_size: 4
+  gradient_accumulation_steps: 16
+  max_steps: 3
+  warmup_steps: 1
+  learning_rate: 3.0e-06
+  min_lr_ratio: 0.15
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  compile_mode: null
+  compile_fullgraph: null
+  liger_kernel: true
+  gradient_checkpointing: false
+  log_interval: 1
+  eval_interval: 0
+  eval_batches: 16
+  save_interval: 3
+  keep_last_checkpoints: 1
+  num_workers: 0
+  mfu_peak_tflops: 119.5

@@ -21,7 +21,13 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from .config import _clean_nulls
-from .sft_data import IGNORE_INDEX, LocalJsonlExamples, SFTTokenDataset, collate_sft_batch
+from .sft_data import (
+    CHAT_TEMPLATE,
+    IGNORE_INDEX,
+    LocalJsonlExamples,
+    SFTTokenDataset,
+    collate_sft_batch,
+)
 from .train import (
     autocast_context,
     get_device,
@@ -72,6 +78,7 @@ class SFTTrainerConfig:
     grad_clip: float = 1.0
     dtype: str = "bfloat16"
     compile: bool = False
+    liger_kernel: bool = False
     gradient_checkpointing: bool = True
     log_interval: int = 10
     eval_interval: int = 100
@@ -255,7 +262,17 @@ def load_tokenizer(model_source: str) -> Any:
     tokenizer = AutoTokenizer.from_pretrained(model_source, use_fast=True)
     if tokenizer.pad_token_id is None and tokenizer.eos_token is not None:
         tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.chat_template = CHAT_TEMPLATE
     return tokenizer
+
+
+def maybe_apply_liger(config: SFTConfig) -> bool:
+    if not config.trainer.liger_kernel:
+        return False
+    from liger_kernel.transformers import apply_liger_kernel_to_llama
+
+    apply_liger_kernel_to_llama()
+    return True
 
 
 def main() -> None:
@@ -272,14 +289,34 @@ def main() -> None:
     if device.type == "cuda":
         torch.set_float32_matmul_precision("high")
         torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cuda.enable_flash_sdp(True)
+        torch.backends.cuda.enable_mem_efficient_sdp(True)
 
     model_source = args.resume or config.base_model
+    liger_applied = maybe_apply_liger(config)
     tokenizer = load_tokenizer(model_source)
-    model = AutoModelForCausalLM.from_pretrained(model_source, torch_dtype=dtype)
+    model = AutoModelForCausalLM.from_pretrained(
+        model_source,
+        torch_dtype=dtype,
+        attn_implementation="sdpa",
+    )
     if tokenizer.pad_token_id is not None:
         model.config.pad_token_id = tokenizer.pad_token_id
+    im_end_id = tokenizer.convert_tokens_to_ids("<|im_end|>")
+    stop_ids = (
+        [int(tokenizer.eos_token_id)]
+        if tokenizer.eos_token_id is not None
+        else []
+    )
+    if isinstance(im_end_id, int) and im_end_id >= 0 and im_end_id not in stop_ids:
+        stop_ids.append(im_end_id)
+    model.generation_config.eos_token_id = stop_ids
+    model.generation_config.pad_token_id = tokenizer.pad_token_id
     if config.trainer.gradient_checkpointing:
-        model.gradient_checkpointing_enable()
+        model.gradient_checkpointing_enable(
+            gradient_checkpointing_kwargs={"use_reentrant": False}
+        )
         model.config.use_cache = False
     model.to(device)
 
@@ -313,6 +350,7 @@ def main() -> None:
                 "sequences_per_step": config.sequences_per_step,
                 "train_on_prompt": config.dataset.train_on_prompt,
                 "start_step": start_step,
+                "liger_kernel": liger_applied,
             },
             ensure_ascii=True,
         ),
@@ -322,6 +360,7 @@ def main() -> None:
     last_log = time.time()
     last_log_step = start_step
     supervised_tokens_since_log = 0
+    tokens_since_log = 0
     for step in range(start_step + 1, config.trainer.max_steps + 1):
         optimizer.zero_grad(set_to_none=True)
         total_loss = 0.0
@@ -334,6 +373,7 @@ def main() -> None:
                 batch = next(iterator)
             batch = move_batch(batch, device)
             supervised_tokens += int((batch["labels"] != IGNORE_INDEX).sum().item())
+            tokens_since_log += int(batch["attention_mask"].sum().item())
             with autocast_context(device, dtype):
                 loss = model(**batch).loss / config.trainer.gradient_accumulation_steps
             total_loss += float(loss.detach().cpu()) * config.trainer.gradient_accumulation_steps
@@ -360,6 +400,7 @@ def main() -> None:
                         "lr": scheduler.get_last_lr()[0],
                         "sequences": step * config.sequences_per_step,
                         "supervised_tokens": supervised_tokens,
+                        "tokens_per_sec_window": tokens_since_log / elapsed,
                         "supervised_tokens_per_sec_window": supervised_tokens_since_log / elapsed,
                         "steps_per_sec_window": steps_since_log / elapsed,
                     },
@@ -368,6 +409,7 @@ def main() -> None:
                 flush=True,
             )
             supervised_tokens_since_log = 0
+            tokens_since_log = 0
 
         if config.trainer.eval_interval > 0 and step % config.trainer.eval_interval == 0:
             metrics = evaluate(model, config, tokenizer, device, dtype)

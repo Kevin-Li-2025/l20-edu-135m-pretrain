@@ -9,8 +9,9 @@ export HF_HUB_ETAG_TIMEOUT="${HF_HUB_ETAG_TIMEOUT:-60}"
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 export PYTHONUNBUFFERED=1
 
+PYTHON="${PYTHON:-python}"
 CONFIG="${1:-configs/l20_edu_135m_stage2_math_code_textbook_replay_8k.yaml}"
-OUTPUT_DIR="$(python - <<'PY' "$CONFIG"
+OUTPUT_DIR="$("$PYTHON" - <<'PY' "$CONFIG"
 from pathlib import Path
 import sys
 import yaml
@@ -20,7 +21,7 @@ with Path(sys.argv[1]).open("r", encoding="utf-8") as handle:
 PY
 )"
 
-INIT_DIR="$(python - <<'PY' "$CONFIG"
+INIT_DIR="$("$PYTHON" - <<'PY' "$CONFIG"
 from pathlib import Path
 import sys
 import yaml
@@ -30,7 +31,7 @@ with Path(sys.argv[1]).open("r", encoding="utf-8") as handle:
 PY
 )"
 
-DATA_DIR="$(python - <<'PY' "$CONFIG"
+DATA_DIR="$("$PYTHON" - <<'PY' "$CONFIG"
 from pathlib import Path
 import sys
 import yaml
@@ -57,8 +58,8 @@ fi
 
 if [ -n "$RESUME_DIR" ] && [ -f "$RESUME_DIR/trainer_state.pt" ]; then
   echo "Resuming stage2 replay from $RESUME_DIR"
-  python -m l20_pretrain.train "$CONFIG" --resume "$RESUME_DIR"
+  "$PYTHON" -m l20_pretrain.train "$CONFIG" --resume "$RESUME_DIR"
 else
   echo "Starting stage2 replay from $INIT_DIR"
-  python -m l20_pretrain.train "$CONFIG"
+  "$PYTHON" -m l20_pretrain.train "$CONFIG"
 fi
