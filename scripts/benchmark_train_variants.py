@@ -31,6 +31,7 @@ class Variant:
     gradient_checkpointing: bool = False
     compile: bool = False
     liger_kernel: bool = False
+    attn_implementation: str | None = None
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,7 +40,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--variants",
         default="base:2,base:3,base:4,ckpt:5,ckpt:6,compile:2,liger:2,liger:3,liger+compile:2",
-        help="Comma-separated variants. Modes can include ckpt, compile, and liger, e.g. liger+compile:3.",
+        help=(
+            "Comma-separated variants. Modes can include ckpt, compile, liger, and flash, "
+            "e.g. flash+liger:4."
+        ),
     )
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--warmup-steps", type=int, default=2)
@@ -53,15 +57,18 @@ def parse_args() -> argparse.Namespace:
 def parse_variant(raw: str) -> Variant:
     mode, micro_batch = raw.split(":", 1)
     flags = {flag for flag in mode.strip().lower().split("+") if flag and flag != "base"}
-    unknown = flags - {"ckpt", "compile", "liger"}
+    unknown = flags - {"ckpt", "compile", "liger", "flash", "sdpa"}
     if unknown:
         raise ValueError(f"Unknown benchmark flags in {raw!r}: {sorted(unknown)}")
+    if "flash" in flags and "sdpa" in flags:
+        raise ValueError(f"Variant cannot request both flash and sdpa attention: {raw!r}")
     return Variant(
         label=raw,
         micro_batch_size=int(micro_batch),
         gradient_checkpointing="ckpt" in flags,
         compile="compile" in flags,
         liger_kernel="liger" in flags,
+        attn_implementation="flash_attention_2" if "flash" in flags else ("sdpa" if "sdpa" in flags else None),
     )
 
 
@@ -109,6 +116,8 @@ def benchmark_variant(
     cfg.trainer.gradient_accumulation_steps = grad_accumulation_steps
     cfg.trainer.compile = variant.compile
     cfg.trainer.liger_kernel = variant.liger_kernel
+    if variant.attn_implementation:
+        cfg.model.attn_implementation = variant.attn_implementation
     dtype = get_dtype(cfg.trainer.dtype)
 
     if device.type == "cuda":
@@ -180,6 +189,7 @@ def benchmark_variant(
         "compile": variant.compile,
         "liger_kernel": variant.liger_kernel,
         "liger_applied": liger_applied,
+        "attn_implementation": cfg.model.attn_implementation,
         "micro_batch_size": variant.micro_batch_size,
         "grad_accumulation_steps": grad_accumulation_steps,
         "measure_steps": measure_steps,

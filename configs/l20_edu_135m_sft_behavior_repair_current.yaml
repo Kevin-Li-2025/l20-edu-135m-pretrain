@@ -1,0 +1,45 @@
+run_name: l20-edu-135m-sft-behavior-repair-current
+base_model: runs/l20-edu-135m-ultra-quality-sft/final
+output_dir: runs/l20-edu-135m-sft-behavior-repair-current
+seed: 20260616
+block_size: 2048
+attn_implementation: sdpa
+
+dataset:
+  name:
+  config_name:
+  split: train
+  eval_split: eval
+  streaming: false
+  local_jsonl_path: data/sft/behavior_repair_train.jsonl
+  eval_local_jsonl_path: data/sft/behavior_repair_eval.jsonl
+  messages_column: messages
+  max_examples:
+  eval_max_examples: 64
+  max_chars: 12000
+  train_on_prompt: false
+  packing: false
+  system_prompt: You are a helpful, accurate, concise AI assistant.
+
+trainer:
+  micro_batch_size: 8
+  gradient_accumulation_steps: 4
+  max_steps: 240
+  warmup_steps: 24
+  learning_rate: 0.000005
+  min_lr_ratio: 0.1
+  weight_decay: 0.0
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  liger_kernel: true
+  gradient_checkpointing: false
+  log_interval: 10
+  eval_interval: 40
+  eval_batches: 4
+  save_interval: 80
+  keep_last_checkpoints: 3
+  num_workers: 0
+  mfu_peak_tflops: 119.5

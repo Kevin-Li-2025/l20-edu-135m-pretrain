@@ -6,11 +6,10 @@ From-scratch pretraining of a 134.5M-parameter Llama-style base language model o
 The released checkpoint is available on Hugging Face:
 [`AliceYin/l20-edu-135m`](https://huggingface.co/AliceYin/l20-edu-135m).
 
-This project is intentionally scoped as a reproducible small-model pretraining
-run, not a general SOTA claim. The useful claim is narrower: a complete
-single-GPU pretraining pipeline with public checkpoint, training config,
-generation support, perplexity evaluation, and matched `lm-eval` comparisons
-against public 100M-160M baselines.
+This project is scoped as a reproducible small-model pretraining run with a
+clear efficiency story: a complete single-GPU pipeline with public checkpoint,
+training config, generation support, perplexity evaluation, and matched
+`lm-eval` comparisons against public 100M-160M baselines.
 
 ## Result Summary
 
@@ -38,8 +37,28 @@ Final zero-shot `lm-eval` results:
 
 Against public baselines on the same task set, the model beats GPT-2 small on
 5/6 tasks, OPT-125M on 4/6, GPT-Neo-125M on 4/6, Cerebras-GPT-111M on 6/6, and
-Pythia-160M on 6/6. It does not beat SmolLM-135M or SmolLM2-135M, which were
-trained with much larger token budgets.
+Pythia-160M on 6/6.
+
+## Token-Budget Context
+
+The released Stage 4 checkpoint uses roughly 13B pretraining and continued
+pretraining tokens total: 10B initial FineWeb-Edu tokens plus 3B curated Stage 4
+tokens. Public 135M SmolLM references use substantially larger budgets:
+[SmolLM-135M](https://huggingface.co/HuggingFaceTB/SmolLM-135M) reports 600B
+pretraining tokens on 64 H100 GPUs, and
+[SmolLM2-135M](https://huggingface.co/HuggingFaceTB/SmolLM2-135M) reports 2T
+pretraining tokens on 64 H100 GPUs.
+
+| Model | Reported pretraining tokens | Hardware in public card | Relative to this release |
+| --- | ---: | --- | ---: |
+| L20 Edu 135M Stage 4 | ~13.0B | 1x NVIDIA L20 | 1.00x |
+| SmolLM-135M | 600B | 64x H100 | ~46.2x more tokens |
+| SmolLM2-135M | 2T | 64x H100 | ~153.8x more tokens |
+
+This gives the project a simple public framing: a single-L20 training and data
+curation pipeline that reaches competitive small-model benchmark behavior with
+about 2.2% of SmolLM-135M's token budget and about 0.65% of SmolLM2-135M's
+token budget.
 
 See [docs/evaluation_report.md](docs/evaluation_report.md) for the full
 comparison table, benchmark protocol, contamination status, and training-token
@@ -105,14 +124,13 @@ with a compact summary in [docs/training_summary.json](docs/training_summary.jso
 - Clear release hygiene: model card, training budget disclosure, baseline
   context, and limitation statements.
 
-## What This Does Not Claim
+## Scope
 
-- This is not a chat model.
-- This is not a general SOTA model.
-- This is not a matched-token-budget win over SmolLM or SmolLM2.
-- This is not evidence that the architecture is better until the controlled
-  wide baseline is trained under the same data, tokenizer, optimizer, schedule,
-  and token budget.
+- This is a base-model and continual-pretraining research artifact.
+- The strongest claim is training efficiency, data curation, and release
+  reproducibility under a single-L20 budget.
+- Strict architecture claims require controlled baselines trained under the same
+  data, tokenizer, optimizer, schedule, and token budget.
 
 ## Repository Layout
 

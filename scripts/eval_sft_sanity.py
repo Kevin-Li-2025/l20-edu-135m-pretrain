@@ -62,6 +62,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-new-tokens", type=int, default=96)
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--top-p", type=float, default=0.9)
+    parser.add_argument("--repetition-penalty", type=float, default=1.12)
+    parser.add_argument("--no-repeat-ngram-size", type=int, default=5)
     parser.add_argument("--dtype", default="bfloat16")
     parser.add_argument("--device", default=None)
     return parser.parse_args()
@@ -154,11 +156,22 @@ def main() -> None:
     for item in SANITY_PROMPTS:
         prompt = format_prompt(args.system_prompt, item["instruction"])
         inputs = tokenizer(prompt, return_tensors="pt").to(device)
+        stop_ids = []
+        for token_id in (
+            tokenizer.eos_token_id,
+            tokenizer.convert_tokens_to_ids("<|im_end|>"),
+        ):
+            if isinstance(token_id, int) and token_id >= 0 and token_id not in stop_ids:
+                stop_ids.append(token_id)
         generation_kwargs: dict[str, Any] = {
             "max_new_tokens": args.max_new_tokens,
             "do_sample": args.temperature > 0,
             "pad_token_id": tokenizer.eos_token_id,
+            "repetition_penalty": args.repetition_penalty,
+            "no_repeat_ngram_size": args.no_repeat_ngram_size,
         }
+        if stop_ids:
+            generation_kwargs["eos_token_id"] = stop_ids
         if args.temperature > 0:
             generation_kwargs["temperature"] = args.temperature
             generation_kwargs["top_p"] = args.top_p

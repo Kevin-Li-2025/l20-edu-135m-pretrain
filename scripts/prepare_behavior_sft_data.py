@@ -28,6 +28,7 @@ CAPITALS = [
     ("Switzerland", "Bern"),
     ("United Arab Emirates", "Abu Dhabi"),
     ("United Kingdom", "London"),
+    ("United States", "Washington, D.C."),
 ]
 
 JSON_ROWS = [
@@ -39,6 +40,7 @@ JSON_ROWS = [
     ("Beijing", "China"),
     ("Ottawa", "Canada"),
     ("Canberra", "Australia"),
+    ("Washington, D.C.", "United States"),
 ]
 
 TWO_BULLET_ROWS = [
@@ -79,6 +81,33 @@ STORY_TOPICS = [
     "a team releasing a small open model",
 ]
 
+EXACT_FORMAT_ROWS = [
+    (
+        "Return exactly this JSON object and nothing else: city Paris, country France.",
+        {"city": "Paris", "country": "France"},
+    ),
+    (
+        "Return exactly this JSON object and nothing else: city London, country United Kingdom.",
+        {"city": "London", "country": "United Kingdom"},
+    ),
+    (
+        "Return exactly this JSON object and nothing else: city Wellington, country New Zealand.",
+        {"city": "Wellington", "country": "New Zealand"},
+    ),
+]
+
+CONCISE_QA_ROWS = [
+    ("Answer yes or no: Is water wet?", "Yes."),
+    ("Answer yes or no: Is the sky usually green?", "No."),
+    ("Answer with one word: opposite of hot.", "cold"),
+    ("Answer with one word: plural of child.", "children"),
+    ("Answer with one word: synonym of fast.", "quick"),
+    ("Answer with one word: synonym of small.", "tiny"),
+    ("Complete this sentence with one short phrase: A GPU is used for", "parallel computation."),
+    ("Name the largest ocean. Answer with only the name.", "Pacific Ocean"),
+    ("Name the smallest prime number. Answer with only the number.", "2"),
+]
+
 
 def add(rows: list[dict[str, str]], instruction: str, response: str) -> None:
     rows.append({"instruction": instruction, "input": "", "output": response})
@@ -91,6 +120,8 @@ def build_rows() -> list[dict[str, str]]:
         add(rows, f"Answer with only the city name: What is the capital of {country}?", city)
         add(rows, f"What is the capital of {country}? Reply with only the city.", city)
         add(rows, f"Give only the answer, no explanation: capital of {country}.", city)
+        add(rows, f"Only output the city. Capital of {country}?", city)
+        add(rows, f"Question: capital of {country}. Required format: city name only.", city)
 
     for city, country in JSON_ROWS:
         add(
@@ -103,6 +134,14 @@ def build_rows() -> list[dict[str, str]]:
             f"Create one compact JSON object for the city {city} in {country}.",
             json.dumps({"city": city, "country": country}, ensure_ascii=False),
         )
+        add(
+            rows,
+            f"Output only JSON: {city} is in {country}.",
+            json.dumps({"city": city, "country": country}, ensure_ascii=False),
+        )
+
+    for instruction, value in EXACT_FORMAT_ROWS:
+        add(rows, instruction, json.dumps(value, ensure_ascii=False))
 
     for topic, bullets in TWO_BULLET_ROWS:
         add(
@@ -129,14 +168,7 @@ def build_rows() -> list[dict[str, str]]:
             ),
         )
 
-    concise_pairs = [
-        ("Answer yes or no: Is water wet?", "Yes."),
-        ("Answer yes or no: Is the sky usually green?", "No."),
-        ("Answer with one word: opposite of hot.", "cold"),
-        ("Answer with one word: plural of child.", "children"),
-        ("Complete this sentence with one short phrase: A GPU is used for", "parallel computation."),
-    ]
-    for instruction, response in concise_pairs:
+    for instruction, response in CONCISE_QA_ROWS:
         add(rows, instruction, response)
 
     return rows
