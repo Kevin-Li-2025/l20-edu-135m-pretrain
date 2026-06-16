@@ -1,0 +1,43 @@
+run_name: l20-edu-135m-ultra-quality-sft
+base_model: /home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-sft-anti-forgetting/interpolated/a0875
+output_dir: runs/l20-edu-135m-ultra-quality-sft
+seed: 20260616
+block_size: 4096
+attn_implementation: sdpa
+dataset:
+  name: null
+  config_name: null
+  split: train
+  eval_split: eval
+  streaming: false
+  local_jsonl_path: data/sft/ultra_quality_sft_30k.jsonl
+  eval_local_jsonl_path: data/sft/ultra_quality_sft_eval_1k.jsonl
+  messages_column: messages
+  max_examples: 30000
+  eval_max_examples: 1024
+  max_chars: 24000
+  train_on_prompt: false
+  packing: true
+  system_prompt: You are a helpful, accurate, concise AI assistant.
+trainer:
+  micro_batch_size: 6
+  gradient_accumulation_steps: 2
+  max_steps: 1600
+  warmup_steps: 80
+  learning_rate: 0.000003
+  min_lr_ratio: 0.1
+  weight_decay: 0.0
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  liger_kernel: true
+  gradient_checkpointing: false
+  log_interval: 10
+  eval_interval: 200
+  eval_batches: 24
+  save_interval: 200
+  keep_last_checkpoints: 4
+  num_workers: 0
+  mfu_peak_tflops: 119.5

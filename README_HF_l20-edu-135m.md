@@ -205,9 +205,17 @@ cannot be ruled out without that audit.
 ## Interpretation
 
 This model is competitive with several older 100M-160M public base models on a
-matched `lm-eval` task suite while using only 10B pretraining tokens on one L20.
-It is not SOTA and does not beat modern heavily overtrained compact models such
-as SmolLM-135M or SmolLM2-135M, which use substantially larger token budgets.
+matched `lm-eval` task suite while using only 10B initial pretraining tokens on
+one L20. The Stage 4 release extends the same project to roughly 13B total
+pretraining and continued-pretraining tokens, which is about 2.2% of the 600B
+tokens reported for SmolLM-135M and about 0.65% of the 2T tokens reported for
+SmolLM2-135M.
+
+| Model | Reported pretraining tokens | Hardware in public card | Relative to Stage 4 |
+| --- | ---: | --- | ---: |
+| L20 Edu 135M Stage 4 | ~13.0B | 1x NVIDIA L20 | 1.00x |
+| SmolLM-135M | 600B | 64x H100 | ~46.2x more tokens |
+| SmolLM2-135M | 2T | 64x H100 | ~153.8x more tokens |
 
 ## Intended Use
 

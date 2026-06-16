@@ -1,0 +1,49 @@
+run_name: l20-edu-135m-cpt10b-2k
+output_dir: runs/l20-edu-135m-cpt10b-2k
+seed: 20260615
+tokenizer_name: /home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-sft-anti-forgetting/interpolated/a0875
+init_model_name_or_path: /home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-sft-anti-forgetting/interpolated/a0875
+dataset:
+  tokenized_path: data/l20_stage4_hq_crossdedup_8k
+  split: train
+  text_column: text
+  append_eos: true
+model:
+  block_size: 2048
+  hidden_size: 576
+  intermediate_size: 1536
+  num_hidden_layers: 30
+  num_attention_heads: 9
+  num_key_value_heads: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 0.000001
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+  rope_scaling:
+    rope_type: yarn
+    factor: 4.0
+    original_max_position_embeddings: 2048
+trainer:
+  micro_batch_size: 16
+  gradient_accumulation_steps: 16
+  max_steps: 17167
+  warmup_steps: 300
+  learning_rate: 0.000008
+  min_lr_ratio: 0.1
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: true
+  liger_kernel: true
+  gradient_checkpointing: false
+  log_interval: 10
+  eval_interval: 250
+  eval_batches: 32
+  save_interval: 500
+  keep_last_checkpoints: 3
+  num_workers: 0
+  mfu_peak_tflops: 119.5

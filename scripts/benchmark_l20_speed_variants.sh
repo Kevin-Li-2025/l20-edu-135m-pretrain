@@ -8,7 +8,7 @@ export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:T
 export PYTHONUNBUFFERED=1
 
 CONFIG="${CONFIG:-configs/l20_edu_135m_hq_longctx_8k.yaml}"
-VARIANTS="${VARIANTS:-base:2,base:3,base:4,ckpt:5,ckpt:6,compile:2,liger:2,liger:3,liger+compile:2}"
+VARIANTS="${VARIANTS:-liger:4,liger:5,flash+liger:4,flash+liger:5,flash+liger+compile:4,ckpt+liger:6}"
 WARMUP_STEPS="${WARMUP_STEPS:-2}"
 MEASURE_STEPS="${MEASURE_STEPS:-5}"
 GRAD_ACCUMULATION_STEPS="${GRAD_ACCUMULATION_STEPS:-1}"

@@ -14,6 +14,7 @@ from typing import Any, Iterator
 from urllib.parse import urlsplit
 
 from datasets import load_dataset
+import pyarrow.parquet as pq
 import requests
 from transformers import AutoTokenizer
 
@@ -208,6 +209,31 @@ def endpoint_url(url: str) -> str:
     return f"{endpoint}{parsed.path}" + (f"?{parsed.query}" if parsed.query else "")
 
 
+def cached_parquet_files(
+    dataset: str,
+    split: str,
+    cache_dir: str | Path,
+) -> list[Path]:
+    repo_dir = dataset.replace("/", "--")
+    split_dir = (
+        Path(cache_dir)
+        / repo_dir
+        / "refs-convert-parquet"
+        / "default"
+        / split
+    )
+    files = sorted(split_dir.glob("*.parquet"))
+    valid: list[Path] = []
+    for path in files:
+        try:
+            metadata = pq.read_metadata(path)
+        except (OSError, ValueError):
+            continue
+        if metadata.num_rows > 0 and metadata.num_row_groups > 0:
+            valid.append(path)
+    return valid
+
+
 def iter_split(
     dataset: str,
     split: str,
@@ -215,17 +241,38 @@ def iter_split(
     cache_dir: str,
 ) -> Iterator[dict[str, Any]]:
     os.environ.setdefault("PARQUET_CACHE_DIR", cache_dir)
-    token = os.environ.get("HF_TOKEN")
-    for url, filename in converted_parquet_urls(dataset, split):
-        local_path = download_parquet_to_local_cache(
-            url=endpoint_url(url),
-            repo_id=dataset,
-            filename=f"refs-convert-parquet/default/{split}/{filename}",
-            token=token,
+    local_paths = cached_parquet_files(dataset, split, cache_dir)
+    if local_paths:
+        print(
+            json.dumps(
+                {
+                    "event": "using_cached_parquet",
+                    "dataset": dataset,
+                    "split": split,
+                    "files": len(local_paths),
+                },
+                ensure_ascii=True,
+            ),
+            flush=True,
         )
+    else:
+        token = os.environ.get("HF_TOKEN")
+        local_paths = []
+        for url, filename in converted_parquet_urls(dataset, split):
+            local_paths.append(
+                Path(
+                    download_parquet_to_local_cache(
+                        url=endpoint_url(url),
+                        repo_id=dataset,
+                        filename=f"refs-convert-parquet/default/{split}/{filename}",
+                        token=token,
+                    )
+                )
+            )
+    for local_path in local_paths:
         rows = load_dataset(
             "parquet",
-            data_files=[local_path],
+            data_files=[str(local_path)],
             split="train",
             streaming=True,
         )
@@ -383,12 +430,26 @@ def main() -> None:
 
         buckets = sorted(bucket_dir.glob("*.jsonl"))
         rng.shuffle(buckets)
+        malformed_bucket_lines = 0
         with output.open("w", encoding="utf-8") as destination:
             for bucket in buckets:
                 lines = bucket.read_text(encoding="utf-8").splitlines()
                 lines.sort()
                 for line in lines:
-                    destination.write(line.split("\t", 1)[1] + "\n")
+                    key, separator, payload = line.partition("\t")
+                    if (
+                        not separator
+                        or len(key) != 16
+                        or any(char not in "0123456789abcdef" for char in key)
+                    ):
+                        malformed_bucket_lines += 1
+                        continue
+                    try:
+                        json.loads(payload)
+                    except json.JSONDecodeError:
+                        malformed_bucket_lines += 1
+                        continue
+                    destination.write(payload + "\n")
         shutil.rmtree(bucket_dir)
         write_jsonl(eval_output, eval_reservoir)
     finally:
@@ -401,6 +462,7 @@ def main() -> None:
         "eval_candidates_after_filtering": eval_accepted,
         "source_counts": dict(source_counts),
         "rejects": dict(rejects),
+        "malformed_bucket_lines": malformed_bucket_lines,
         "max_example_tokens": args.max_example_tokens,
         "benchmark_contamination_ngram": 13,
         "benchmark_contamination_lcs_threshold": 0.60,
