@@ -23,6 +23,10 @@ speed = [
 eval = [
   "lm-eval>=0.4.4",
 ]
+rlvr = [
+  "accelerate>=0.34",
+  "trl>=0.17",
+]
 
 [project.scripts]
 l20-pretrain = "l20_pretrain.train:main"
