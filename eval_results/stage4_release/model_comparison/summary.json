@@ -1,0 +1,140 @@
+{
+  "generated_at": "2026-06-16T16:55:19.734118+00:00",
+  "models": [
+    {
+      "budget_note": "1.00x",
+      "hardware": "1x NVIDIA L20",
+      "key": "l20-edu-135m-stage4",
+      "mean": 0.41497374066229775,
+      "name": "L20 Edu 135M Stage 4",
+      "params": "134.5M",
+      "source": "self-run release eval",
+      "tokens": "~13B"
+    },
+    {
+      "budget_note": "~46.2x tokens",
+      "hardware": "64x H100",
+      "key": "smollm-135m",
+      "mean": 0.4767124569279318,
+      "name": "SmolLM-135M",
+      "params": "135M",
+      "source": "self-run public checkpoint",
+      "tokens": "600B"
+    },
+    {
+      "budget_note": "~153.8x tokens",
+      "hardware": "64x H100",
+      "key": "smollm2-135m",
+      "mean": 0.4916822407842775,
+      "name": "SmolLM2-135M",
+      "params": "135M",
+      "source": "self-run public checkpoint",
+      "tokens": "2T"
+    },
+    {
+      "budget_note": "larger reference",
+      "hardware": "not reported in HF card",
+      "key": "qwen2.5-0.5b",
+      "mean": 0.5363119684276803,
+      "name": "Qwen2.5-0.5B",
+      "params": "0.49B",
+      "source": "self-run public checkpoint",
+      "tokens": "not reported in HF card"
+    },
+    {
+      "budget_note": "~230.8x tokens; 1B upper bound",
+      "hardware": "not listed in HF card",
+      "key": "olmo-1b",
+      "mean": 0.5681300997007989,
+      "name": "OLMo-1B",
+      "params": "1B",
+      "source": "self-run public checkpoint",
+      "tokens": "3T"
+    }
+  ],
+  "protocol": {
+    "batch_size": "auto",
+    "device": "cuda:0",
+    "dtype": "bfloat16",
+    "fewshot": "zero-shot",
+    "harness": "lm-evaluation-harness",
+    "selected_metrics": {
+      "arc_challenge": "acc_norm,none",
+      "arc_easy": "acc_norm,none",
+      "hellaswag": "acc_norm,none",
+      "lambada_openai": "acc,none",
+      "piqa": "acc_norm,none",
+      "winogrande": "acc,none"
+    },
+    "tasks": [
+      "arc_challenge",
+      "arc_easy",
+      "hellaswag",
+      "lambada_openai",
+      "piqa",
+      "winogrande"
+    ]
+  },
+  "tasks": [
+    {
+      "display": "ARC-Challenge",
+      "l20-edu-135m-stage4": 0.28668941979522183,
+      "metric": "acc_norm,none",
+      "olmo-1b": 0.30887372013651876,
+      "qwen2.5-0.5b": 0.3225255972696246,
+      "smollm-135m": 0.28754266211604096,
+      "smollm2-135m": 0.29692832764505117,
+      "task": "arc_challenge"
+    },
+    {
+      "display": "ARC-Easy",
+      "l20-edu-135m-stage4": 0.4957912457912458,
+      "metric": "acc_norm,none",
+      "olmo-1b": 0.5711279461279462,
+      "qwen2.5-0.5b": 0.585016835016835,
+      "smollm-135m": 0.561026936026936,
+      "smollm2-135m": 0.5854377104377104,
+      "task": "arc_easy"
+    },
+    {
+      "display": "HellaSwag",
+      "l20-edu-135m-stage4": 0.3240390360485959,
+      "metric": "acc_norm,none",
+      "olmo-1b": 0.6293567018522207,
+      "qwen2.5-0.5b": 0.5215096594303924,
+      "smollm-135m": 0.42650866361282613,
+      "smollm2-135m": 0.43009360685122483,
+      "task": "hellaswag"
+    },
+    {
+      "display": "LAMBADA OpenAI",
+      "l20-edu-135m-stage4": 0.26023675528818163,
+      "metric": "acc,none",
+      "olmo-1b": 0.5538521249757423,
+      "qwen2.5-0.5b": 0.5200853871531147,
+      "smollm-135m": 0.3757034737046381,
+      "smollm2-135m": 0.4288763826896953,
+      "task": "lambada_openai"
+    },
+    {
+      "display": "PIQA",
+      "l20-edu-135m-stage4": 0.6147986942328618,
+      "metric": "acc_norm,none",
+      "olmo-1b": 0.7480957562568009,
+      "qwen2.5-0.5b": 0.6996735582154516,
+      "smollm-135m": 0.6822633297062024,
+      "smollm2-135m": 0.6838955386289445,
+      "task": "piqa"
+    },
+    {
+      "display": "WinoGrande",
+      "l20-edu-135m-stage4": 0.5082872928176796,
+      "metric": "acc,none",
+      "olmo-1b": 0.5974743488555643,
+      "qwen2.5-0.5b": 0.569060773480663,
+      "smollm-135m": 0.5272296764009471,
+      "smollm2-135m": 0.5248618784530387,
+      "task": "winogrande"
+    }
+  ]
+}

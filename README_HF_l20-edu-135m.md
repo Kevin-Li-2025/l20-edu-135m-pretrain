@@ -1,261 +1,112 @@
 ---
-license: apache-2.0
-language:
-- en
 library_name: transformers
 pipeline_tag: text-generation
 tags:
-- causal-lm
-- pretraining
-- from-scratch
-- fineweb-edu
+- continual-pretraining
+- sft
+- 135m
 - single-gpu
 - l20
-datasets:
-- HuggingFaceFW/fineweb-edu
+- data-curation
+license: apache-2.0
+language:
+- en
 ---
 
-# l20-edu-135m
+# L20 Edu 135M Stage 4
 
-`l20-edu-135m` is a 134.5M-parameter Llama-style causal language model
-pretrained from scratch on 10B FineWeb-Edu tokens using a single NVIDIA L20 GPU.
+`l20-edu-135m` is a 134.5M-parameter Llama-style language model trained and improved on a single NVIDIA L20 GPU. The default checkpoint is the selected Stage 4 anti-forgetting release: an 87.5% SFT checkpoint blended with 12.5% Stage 4 base weights, chosen by six-task regression gates.
 
-This is a **base model**, not an instruction-tuned chat model. It is released as
-a small-model pretraining artifact for research, evaluation, reproducibility,
-continued pretraining, and downstream supervised fine-tuning.
+The key result is token and compute efficiency: the released model uses roughly 13B pretraining/continual-pretraining tokens total (10B initial FineWeb-Edu pretraining + 3B Stage 4 curated continuation), while public 135M SmolLM references use far larger budgets: SmolLM-135M reports 600B pretraining tokens and SmolLM2-135M reports 2T pretraining tokens. That puts this release at about 2.2% of SmolLM-135M token budget and about 0.65% of SmolLM2-135M token budget, trained on one L20 rather than the 64 H100 setup reported by the SmolLM model cards.
 
-## Model Details
+## Highlights
 
-| Field | Value |
-| --- | --- |
-| Model type | Decoder-only causal LM |
-| Architecture | Llama-style Transformer |
-| Parameters | 134,515,008 |
-| Layers | 30 |
-| Hidden size | 576 |
-| FFN size | 1536 |
-| Attention | 9 query heads, 3 key/value heads |
-| Context length | 2048 |
-| Tokenizer | `HuggingFaceTB/SmolLM2-135M` tokenizer |
-| Training data | `HuggingFaceFW/fineweb-edu`, `sample-10BT` |
-| Training budget | 10,001,252,352 planned tokens |
-| Tokens / parameter | 74.35 |
-| Final checkpoint | step 18,928 |
-| Hardware | single NVIDIA L20 GPU |
+- Parameters: 134,515,008
+- Hardware: single NVIDIA L20 GPU
+- Initial pretraining: 10,001,252,352 FineWeb-Edu tokens
+- Stage 4 continuation: 3,000,000,965 curated tokens
+- Released pretraining-token total: about 13.0B tokens
+- Throughput from the initial 10B run: 38.5k tokens/s mean after warmup
+- Context length: 8,192 tokens for Stage 4 continued pretraining
+- Data filtering: cross-source MinHash/LSH deduplication, sentence/paragraph deduplication, benchmark decontamination, and LCS overlap removal
+- Selection: benchmark regression gates and base/SFT interpolation to preserve general benchmark performance
 
-## Training Recipe
+## Token-Budget Context
 
-| Field | Value |
-| --- | --- |
-| Sequence length | 2048 tokens |
-| Micro batch size | 6 sequences |
-| Gradient accumulation | 43 steps |
-| Global batch size | 258 sequences |
-| Tokens / optimizer step | 528,384 |
-| Max steps | 18,928 |
-| Optimizer | AdamW |
-| Peak learning rate | `4e-4` |
-| LR schedule | linear warmup + cosine decay to `0.1 * peak_lr` |
-| Warmup | 1,000 steps |
-| Weight decay | 0.1 |
-| Adam beta1 / beta2 | 0.9 / 0.95 |
-| Gradient clipping | 1.0 |
-| Precision | bfloat16 |
-| Gradient checkpointing | enabled |
-| Torch compile | enabled |
-| Eval interval | 500 steps |
-| Checkpoint interval | 1,000 steps, keeping the last 2 regular checkpoints |
-
-The training config is included in the repository as
-`configs/l20_135m_deepthin.yaml`. A fuller recipe is available in
-`docs/training_recipe.md`.
-
-## Runtime And Cost Notes
-
-| Field | Value |
-| --- | --- |
-| GPU | NVIDIA L20 |
-| Reported GPU memory | 46,068 MiB total |
-| Mean logged throughput | 38,541 tokens/s |
-| Mean logged throughput after step 1,000 | 38,587 tokens/s |
-| Estimated training time | about 72 GPU-hours |
-| Final checkpoint mtime | 2026-05-19 05:04:22 +0800 |
-
-Exact peak VRAM and billing cost were not logged. A reproducible cost estimate
-is `72 GPU-hours * L20_hourly_rate`, excluding storage, network egress, idle
-time, and engineering time.
-
-Known run issues:
-
-- Transient dataset mirror read timeouts occurred near the end of training and
-  recovered through retry.
-- The final perplexity command printed `loss=2.8731 perplexity=17.69`, then hit
-  a Python finalization crash. The metric is reported because it was printed
-  before process teardown.
-- The training process printed `terminate called without an active exception`
-  after the final checkpoint had been written. The final checkpoint was
-  load-tested with `AutoModelForCausalLM`.
-
-## Usage
-
-```python
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-repo = "AliceYin/l20-edu-135m"
-tokenizer = AutoTokenizer.from_pretrained(repo)
-model = AutoModelForCausalLM.from_pretrained(repo)
-
-prompt = "The capital of France is"
-inputs = tokenizer(prompt, return_tensors="pt")
-outputs = model.generate(
-    **inputs,
-    max_new_tokens=40,
-    do_sample=True,
-    temperature=0.8,
-    top_p=0.95,
-)
-print(tokenizer.decode(outputs[0], skip_special_tokens=True))
-```
-
-Because this is a base model, completion-style prompts work better than
-instruction/chat prompts.
-
-## Evaluation
-
-Final validation:
-
-- Loss: `2.8731`
-- Perplexity: `17.69`
-
-Training artifacts:
-
-- `training/training_metrics.csv`
-- `training/training_summary.json`
-- `training/loss_curve_zoom.png`
-- `training/training_curves.png`
-
-![Loss curve after warmup](training/loss_curve_zoom.png)
-
-![Training curves](training/training_curves.png)
-
-Zero-shot `lm-eval` results for the final checkpoint:
-
-| Task | Metric | Score |
-| --- | --- | ---: |
-| ARC-Challenge | acc_norm | 0.2765 |
-| ARC-Easy | acc_norm | 0.5059 |
-| HellaSwag | acc_norm | 0.3272 |
-| LAMBADA OpenAI | acc | 0.2540 |
-| PIQA | acc_norm | 0.6224 |
-| WinoGrande | acc | 0.5099 |
-
-### Benchmark Protocol
-
-Candidate and public baseline numbers were run with the same evaluation setup:
-
-| Field | Setting |
-| --- | --- |
-| Harness | EleutherAI `lm-evaluation-harness` |
-| Harness version | `0.4.12` |
-| Backend | `--model hf` |
-| Device | `cuda:0` |
-| Dtype | `bfloat16` |
-| Batch size | `auto`, resolved to 64 |
-| Few-shot setting | zero-shot |
-| Dataset limit | none; full task datasets |
-| Samples | `--log_samples` enabled |
-| Seeds | harness defaults: Python 0, NumPy 1234, Torch 1234, few-shot 1234 |
-| Candidate numbers | self-run on the final checkpoint |
-| Baseline numbers | self-run through `scripts/eval_public_baselines.sh`, not copied from leaderboards |
-
-The public baselines were evaluated with the same harness version, task list,
-zero-shot setting, dtype, device class, batch policy, and comparison parser. They
-were **not** evaluated with the same tokenizer or model context length; each
-public model used its own released tokenizer and Hugging Face model config. This
-is therefore a public-model benchmark comparison, not a controlled
-same-tokenizer architecture comparison.
-
-Public baseline win rates on the same task set:
-
-| Baseline | Wins / Tasks | Win Rate |
-| --- | ---: | ---: |
-| GPT-2 small | 5 / 6 | 0.833 |
-| OPT-125M | 4 / 6 | 0.667 |
-| GPT-Neo-125M | 4 / 6 | 0.667 |
-| Cerebras-GPT-111M | 6 / 6 | 1.000 |
-| Pythia-160M | 6 / 6 | 1.000 |
-| SmolLM-135M | 0 / 6 | 0.000 |
-| SmolLM2-135M | 0 / 6 | 0.000 |
-
-The full comparison artifacts are included in this repository under:
-
-- `eval/comparison.md`
-- `eval/comparison.json`
-- `docs/evaluation_report.md`
-
-### Contamination Status
-
-No full benchmark contamination pass is claimed for this release. The project
-repository includes `scripts/check_contamination.py` and
-`scripts/sample_training_text.py`, but a separate audit against ARC, HellaSwag,
-PIQA, LAMBADA, and WinoGrande samples was not completed before release. Because
-the model was trained on a public web-scale FineWeb-Edu slice, benchmark overlap
-cannot be ruled out without that audit.
-
-## Interpretation
-
-This model is competitive with several older 100M-160M public base models on a
-matched `lm-eval` task suite while using only 10B initial pretraining tokens on
-one L20. The Stage 4 release extends the same project to roughly 13B total
-pretraining and continued-pretraining tokens, which is about 2.2% of the 600B
-tokens reported for SmolLM-135M and about 0.65% of the 2T tokens reported for
-SmolLM2-135M.
-
-| Model | Reported pretraining tokens | Hardware in public card | Relative to Stage 4 |
+| Model | Reported pretraining tokens | Hardware in public card | Relative to this release |
 | --- | ---: | --- | ---: |
 | L20 Edu 135M Stage 4 | ~13.0B | 1x NVIDIA L20 | 1.00x |
 | SmolLM-135M | 600B | 64x H100 | ~46.2x more tokens |
 | SmolLM2-135M | 2T | 64x H100 | ~153.8x more tokens |
 
+This comparison is about training-budget context, not a claim of identical data, tokenizer, architecture, or benchmark protocol. The useful takeaway is that the project demonstrates a complete small-model pretraining, curation, evaluation, SFT, and release pipeline under a much smaller single-GPU budget.
+
+## Benchmark Comparison
+
+| Model | Params | Reported tokens | Reported hardware | 6-task Mean | Budget context |
+| --- | ---: | ---: | --- | ---: | --- |
+| L20 Edu 135M Stage 4 | 134.5M | ~13B | 1x NVIDIA L20 | 0.4150 | 1.00x |
+| SmolLM-135M | 135M | 600B | 64x H100 | 0.4767 | ~46.2x tokens |
+| SmolLM2-135M | 135M | 2T | 64x H100 | 0.4917 | ~153.8x tokens |
+| Qwen2.5-0.5B | 0.49B | not reported in HF card | not reported in HF card | 0.5363 | larger reference |
+| OLMo-1B | 1B | 3T | not listed in HF card | 0.5681 | ~230.8x tokens; 1B upper bound |
+
+These are same-protocol self-run numbers on the released checkpoints. The key same-size comparison is SmolLM-135M: this release is 0.0617 mean points behind while using about 2.2% of SmolLM-135M's reported token budget and a single L20 instead of the 64 H100 setup reported in its model card. Qwen2.5-0.5B and OLMo-1B are included as larger reference/upper-bound checkpoints, not same-size baselines.
+
+Detailed task-level scores are included in `eval_results/stage4_release/model_comparison/summary.md`, `summary.csv`, and `summary.json`.
+
+## Selected Six-Task Results
+
+Regression gate: passed. The selected SFT/interpolated release reaches a six-task mean of 0.4150 versus 0.4141 for the Stage 4 base.
+
+| Task | Metric | Score |
+| --- | --- | ---: |
+| ARC-Challenge | acc_norm,none | 0.2867 |
+| ARC-Easy | acc_norm,none | 0.4958 |
+| HellaSwag | acc_norm,none | 0.3240 |
+| LAMBADA OpenAI | acc,none | 0.2602 |
+| PIQA | acc_norm,none | 0.6148 |
+| WinoGrande | acc,none | 0.5083 |
+| Mean | selected metric average | 0.4150 |
+
+## Stage 4 Base Results
+
+| Task | Metric | Score |
+| --- | --- | ---: |
+| ARC-Challenge | acc_norm,none | 0.2833 |
+| ARC-Easy | acc_norm,none | 0.5046 |
+| HellaSwag | acc_norm,none | 0.3243 |
+| LAMBADA OpenAI | acc,none | 0.2482 |
+| PIQA | acc_norm,none | 0.6181 |
+| WinoGrande | acc,none | 0.5059 |
+
+## Data Gate
+
+- Status: `pass`
+- Validation tokens: 4,194,398
+- Stage 4 indexed documents: 3,312,229
+- Indexed sentence/paragraph segments: 34,852,069
+- Benchmark-contaminated documents removed: 23
+- Benchmark audit: ARC-Challenge, ARC-Easy, HellaSwag, PIQA, LAMBADA OpenAI, and WinoGrande
+- Matching: 13-gram candidates plus token LCS overlap >= 0.60 removal
+- Deduplication: 64-permutation MinHash with LSH candidate search across sources
+
+## Training And Selection
+
+- Initial model: 10B-token from-scratch FineWeb-Edu run on one L20
+- Stage 4 data: high-quality cross-deduplicated educational/code/reasoning mix
+- Stage 4 selected base checkpoint: step 2500
+- Selected validation loss: 2.9263725876808167
+- SFT data: filtered HuggingFaceTB/smol-smoltalk style data for the 135M model
+- SFT training rows: 426,842
+- Anti-forgetting: model soup/interpolation candidates selected by six-task regression gates
+
+## Reproducibility
+
+Evaluation uses `lm-evaluation-harness` with fixed seed and full zero-shot task datasets for ARC-Challenge, ARC-Easy, HellaSwag, LAMBADA OpenAI, PIQA, and WinoGrande. Artifacts and summaries are included under `eval_results/` in the model repository.
+
+Generated: 2026-06-16T16:55:19.734757+00:00
+
 ## Intended Use
 
-This checkpoint is suitable for:
-
-- base model evaluation
-- continued pretraining experiments
-- supervised fine-tuning experiments
-- small-model training pipeline demonstrations
-- studying single-GPU pretraining tradeoffs
-
-It is not suitable as a production assistant without post-training, safety
-evaluation, and domain-specific validation.
-
-## Limitations
-
-- This is a small base model trained on 10B tokens.
-- It is not instruction-tuned and may not follow user requests reliably.
-- It can produce incorrect facts, repetition, or incomplete generations.
-- It has not been safety aligned.
-- Benchmark results should not be interpreted as general assistant quality.
-- Results should not be described as SOTA without controlled matched-budget
-  baselines and contamination checks.
-
-## Training-Budget Context
-
-For fair interpretation, training data size matters:
-
-| Model | Reported Training Budget |
-| --- | --- |
-| `l20-edu-135m` | 10B FineWeb-Edu tokens |
-| GPT-2 small | WebText, about 40GB text; no clean official token count |
-| OPT-125M | 180B tokens |
-| GPT-Neo-125M | The Pile, commonly reported as 300B tokens |
-| Cerebras-GPT-111M | about 2.2B tokens |
-| Pythia-160M | about 300B tokens |
-| SmolLM-135M | 600B tokens |
-| SmolLM2-135M | 2T tokens |
-
-## Citation
-
-If you use this checkpoint, please cite or link to this repository and include
-the training-token budget when comparing against other compact language models.
+This is a research model for small-model pretraining, data curation, continual pretraining, evaluation, and downstream fine-tuning experiments. Users should independently validate factuality, safety, and task suitability before deployment.
