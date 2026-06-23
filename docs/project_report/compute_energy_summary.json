@@ -1,0 +1,20 @@
+{
+  "training": {
+    "latest_step": 1500,
+    "latest_tokens": 786432000,
+    "latest_loss": 2.950166165828705,
+    "recent_tokens_per_sec": 48998.59810524209,
+    "recent_mfu_pct": 50.506005246399575,
+    "max_tokens_per_sec": 49162.19437466888,
+    "max_mfu_pct": 50.67463443910043,
+    "estimated_remaining_hours_for_10b": 52.232605491026
+  },
+  "energy": {
+    "assumed_gpu_power_w": 350.0,
+    "logged_window_seconds": 16167.272319793701,
+    "logged_tokens": 786432000,
+    "estimated_gpu_kwh_for_logged_windows": 1.5718181422021653,
+    "estimated_gpu_wh_per_million_tokens": 1.9986701230394557,
+    "note": "Energy uses observed steady nvidia-smi power around 341-354 W; wall power is higher."
+  }
+}

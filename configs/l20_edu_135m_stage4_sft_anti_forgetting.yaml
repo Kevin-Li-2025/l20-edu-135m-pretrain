@@ -1,0 +1,43 @@
+run_name: l20-edu-135m-stage4-sft-anti-forgetting
+base_model: /home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-hq-crossdedup-8k/step-002500
+output_dir: runs/l20-edu-135m-stage4-sft-anti-forgetting
+seed: 20260615
+block_size: 8192
+attn_implementation: sdpa
+dataset:
+  name: null
+  config_name: null
+  split: train
+  eval_split: eval
+  streaming: false
+  local_jsonl_path: data/sft/stage4_smol_smoltalk_hq.jsonl
+  eval_local_jsonl_path: data/sft/stage4_smol_smoltalk_eval_2k.jsonl
+  messages_column: messages
+  max_examples: 426837
+  eval_max_examples: 2048
+  max_chars: 50000
+  train_on_prompt: false
+  packing: true
+  system_prompt: You are a helpful, accurate, concise AI assistant.
+trainer:
+  micro_batch_size: 4
+  gradient_accumulation_steps: 2
+  max_steps: 6000
+  warmup_steps: 300
+  learning_rate: 1.0e-05
+  min_lr_ratio: 0.1
+  weight_decay: 0.0
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  liger_kernel: true
+  gradient_checkpointing: false
+  log_interval: 10
+  eval_interval: 500
+  eval_batches: 32
+  save_interval: 500
+  keep_last_checkpoints: 4
+  num_workers: 0
+  mfu_peak_tflops: 119.5

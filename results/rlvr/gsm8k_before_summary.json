@@ -1,0 +1,7 @@
+{
+  "accuracy": 0.01819560272934041,
+  "correct": 24,
+  "data": "data/rlvr/gsm8k_test.jsonl",
+  "model": "runs/l20-edu-135m-stage4-sft-anti-forgetting/interpolated/a0875",
+  "n": 1319
+}

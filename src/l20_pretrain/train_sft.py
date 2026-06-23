@@ -21,11 +21,13 @@ from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from .config import _clean_nulls
+from .modeling import count_parameters
 from .sft_data import (
     CHAT_TEMPLATE,
     IGNORE_INDEX,
     LocalJsonlExamples,
     SFTTokenDataset,
+    PackedSFTTokenDataset,
     collate_sft_batch,
 )
 from .train import (
@@ -34,6 +36,7 @@ from .train import (
     get_dtype,
     make_optimizer,
     make_scheduler,
+    estimate_mfu,
     move_batch,
     prune_checkpoints,
     update_checkpoint_pointer,
@@ -61,6 +64,7 @@ class SFTDatasetConfig:
     max_chars: int | None = 12000
     shuffle_buffer: int = 10000
     train_on_prompt: bool = False
+    packing: bool = False
     system_prompt: str | None = "You are a helpful, concise assistant."
 
 
@@ -86,6 +90,7 @@ class SFTTrainerConfig:
     save_interval: int = 200
     keep_last_checkpoints: int = 2
     num_workers: int = 0
+    mfu_peak_tflops: float | None = None
 
 
 @dataclass
@@ -95,6 +100,7 @@ class SFTConfig:
     output_dir: str = "runs/l20-edu-135m-sft"
     seed: int = 1337
     block_size: int = 2048
+    attn_implementation: str | None = "sdpa"
     dataset: SFTDatasetConfig = field(default_factory=SFTDatasetConfig)
     trainer: SFTTrainerConfig = field(default_factory=SFTTrainerConfig)
 
@@ -187,6 +193,8 @@ def build_sft_loader(
         response_column=config.dataset.response_column,
         system_prompt=config.dataset.system_prompt,
     )
+    if config.dataset.packing and split is None:
+        dataset = PackedSFTTokenDataset(dataset)
     return DataLoader(
         dataset,
         batch_size=config.trainer.micro_batch_size,
@@ -275,6 +283,18 @@ def maybe_apply_liger(config: SFTConfig) -> bool:
     return True
 
 
+def estimate_sft_flops_per_token(model: torch.nn.Module, block_size: int, parameter_count: int) -> int:
+    config = unwrap_model(model).config
+    hidden_size = int(getattr(config, "hidden_size", 0) or 0)
+    num_layers = int(getattr(config, "num_hidden_layers", 0) or 0)
+    num_heads = int(getattr(config, "num_attention_heads", 0) or 0)
+    if hidden_size <= 0 or num_layers <= 0 or num_heads <= 0:
+        return int(6 * parameter_count)
+    head_dim = hidden_size // max(1, num_heads)
+    attention_flops = 12 * num_layers * num_heads * head_dim * block_size
+    return int(6 * parameter_count + attention_flops)
+
+
 def main() -> None:
     args = parse_args()
     config = load_sft_config(args.config)
@@ -299,7 +319,7 @@ def main() -> None:
     model = AutoModelForCausalLM.from_pretrained(
         model_source,
         torch_dtype=dtype,
-        attn_implementation="sdpa",
+        attn_implementation=config.attn_implementation,
     )
     if tokenizer.pad_token_id is not None:
         model.config.pad_token_id = tokenizer.pad_token_id
@@ -337,6 +357,9 @@ def main() -> None:
     loader = build_sft_loader(config, tokenizer)
     iterator = iter(loader)
     model.train()
+    parameter_count = count_parameters(unwrap_model(model))
+    flops_per_token = estimate_sft_flops_per_token(model, config.block_size, parameter_count)
+    peak_memory_gb = None
 
     print(
         json.dumps(
@@ -347,10 +370,15 @@ def main() -> None:
                 "device": str(device),
                 "dtype": config.trainer.dtype,
                 "block_size": config.block_size,
+                "attn_implementation": config.attn_implementation,
                 "sequences_per_step": config.sequences_per_step,
                 "train_on_prompt": config.dataset.train_on_prompt,
+                "packing": config.dataset.packing,
                 "start_step": start_step,
                 "liger_kernel": liger_applied,
+                "parameters": parameter_count,
+                "flops_per_token_estimate": flops_per_token,
+                "mfu_peak_tflops": config.trainer.mfu_peak_tflops,
             },
             ensure_ascii=True,
         ),
@@ -391,23 +419,32 @@ def main() -> None:
             steps_since_log = max(1, step - last_log_step)
             last_log = now
             last_log_step = step
-            print(
-                json.dumps(
-                    {
-                        "event": "train",
-                        "step": step,
-                        "loss": total_loss / config.trainer.gradient_accumulation_steps,
-                        "lr": scheduler.get_last_lr()[0],
-                        "sequences": step * config.sequences_per_step,
-                        "supervised_tokens": supervised_tokens,
-                        "tokens_per_sec_window": tokens_since_log / elapsed,
-                        "supervised_tokens_per_sec_window": supervised_tokens_since_log / elapsed,
-                        "steps_per_sec_window": steps_since_log / elapsed,
-                    },
-                    ensure_ascii=True,
-                ),
-                flush=True,
+            tokens_per_sec = tokens_since_log / elapsed
+            supervised_tokens_per_sec = supervised_tokens_since_log / elapsed
+            mfu = estimate_mfu(
+                tokens_per_sec=tokens_per_sec,
+                flops_per_token=flops_per_token,
+                peak_tflops=config.trainer.mfu_peak_tflops,
             )
+            if device.type == "cuda":
+                peak_memory_gb = torch.cuda.max_memory_allocated() / 1024**3
+            payload: dict[str, Any] = {
+                "event": "train",
+                "step": step,
+                "loss": total_loss / config.trainer.gradient_accumulation_steps,
+                "lr": scheduler.get_last_lr()[0],
+                "sequences": step * config.sequences_per_step,
+                "supervised_tokens": supervised_tokens,
+                "tokens_per_sec_window": tokens_per_sec,
+                "supervised_tokens_per_sec_window": supervised_tokens_per_sec,
+                "steps_per_sec_window": steps_since_log / elapsed,
+            }
+            if mfu is not None:
+                payload["mfu"] = mfu
+                payload["mfu_pct"] = 100.0 * mfu
+            if peak_memory_gb is not None:
+                payload["peak_memory_gb"] = peak_memory_gb
+            print(json.dumps(payload, ensure_ascii=True), flush=True)
             supervised_tokens_since_log = 0
             tokens_since_log = 0
 

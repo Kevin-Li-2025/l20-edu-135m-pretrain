@@ -1,0 +1,74 @@
+{
+  "baselines": [
+    "smollm-135m",
+    "smollm2-135m"
+  ],
+  "candidate": "ours-stage2",
+  "means": {
+    "ours-stage2": 0.43113943348865447,
+    "smollm-135m": 0.4767124569279318,
+    "smollm2-135m": 0.4916822407842775
+  },
+  "tasks": [
+    {
+      "display": "ARC-Challenge",
+      "gap_vs_smollm-135m": -0.0068259385665528916,
+      "gap_vs_smollm2-135m": -0.016211604095563104,
+      "metric": "acc_norm,none",
+      "ours-stage2": 0.28071672354948807,
+      "smollm-135m": 0.28754266211604096,
+      "smollm2-135m": 0.29692832764505117,
+      "task": "arc_challenge"
+    },
+    {
+      "display": "ARC-Easy",
+      "gap_vs_smollm-135m": -0.05513468013468015,
+      "gap_vs_smollm2-135m": -0.07954545454545459,
+      "metric": "acc_norm,none",
+      "ours-stage2": 0.5058922558922558,
+      "smollm-135m": 0.561026936026936,
+      "smollm2-135m": 0.5854377104377104,
+      "task": "arc_easy"
+    },
+    {
+      "display": "HellaSwag",
+      "gap_vs_smollm-135m": -0.10227046405098589,
+      "gap_vs_smollm2-135m": -0.10585540728938458,
+      "metric": "acc_norm,none",
+      "ours-stage2": 0.32423819956184025,
+      "smollm-135m": 0.42650866361282613,
+      "smollm2-135m": 0.43009360685122483,
+      "task": "hellaswag"
+    },
+    {
+      "display": "LAMBADA OpenAI",
+      "gap_vs_smollm-135m": null,
+      "gap_vs_smollm2-135m": null,
+      "metric": "acc,none",
+      "ours-stage2": null,
+      "smollm-135m": 0.3757034737046381,
+      "smollm2-135m": 0.4288763826896953,
+      "task": "lambada_openai"
+    },
+    {
+      "display": "PIQA",
+      "gap_vs_smollm-135m": -0.06855277475516863,
+      "gap_vs_smollm2-135m": -0.0701849836779107,
+      "metric": "acc_norm,none",
+      "ours-stage2": 0.6137105549510338,
+      "smollm-135m": 0.6822633297062024,
+      "smollm2-135m": 0.6838955386289445,
+      "task": "piqa"
+    },
+    {
+      "display": "WinoGrande",
+      "gap_vs_smollm-135m": null,
+      "gap_vs_smollm2-135m": null,
+      "metric": "acc,none",
+      "ours-stage2": null,
+      "smollm-135m": 0.5272296764009471,
+      "smollm2-135m": 0.5248618784530387,
+      "task": "winogrande"
+    }
+  ]
+}

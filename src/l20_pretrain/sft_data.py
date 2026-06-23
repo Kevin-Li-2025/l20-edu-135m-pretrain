@@ -210,32 +210,12 @@ def encode_sft_example(
     if not input_ids:
         return None
 
-    eos_token_id = getattr(tokenizer, "eos_token_id", None)
-    if eos_token_id is not None:
-        input_ids.append(int(eos_token_id))
-        labels.append(int(eos_token_id))
-
     input_ids = input_ids[:block_size]
     labels = labels[:block_size]
     if not any(label != IGNORE_INDEX for label in labels):
         return None
 
-    if eos_token_id is not None:
-        supervised = [idx for idx, label in enumerate(labels) if label != IGNORE_INDEX]
-        if supervised:
-            last = supervised[-1]
-            input_ids[last] = int(eos_token_id)
-            labels[last] = int(eos_token_id)
-
     attention_mask = [1] * len(input_ids)
-    pad_token_id = getattr(tokenizer, "pad_token_id", None)
-    if pad_token_id is None:
-        pad_token_id = eos_token_id if eos_token_id is not None else 0
-    if len(input_ids) < block_size:
-        padding = block_size - len(input_ids)
-        input_ids.extend([int(pad_token_id)] * padding)
-        attention_mask.extend([0] * padding)
-        labels.extend([IGNORE_INDEX] * padding)
 
     return {
         "input_ids": torch.tensor(input_ids, dtype=torch.long),
@@ -301,6 +281,60 @@ class SFTTokenDataset(IterableDataset):
             emitted += 1
             if self.max_examples is not None and emitted >= self.max_examples:
                 return
+
+
+class PackedSFTTokenDataset(IterableDataset):
+    def __init__(self, dataset: SFTTokenDataset) -> None:
+        super().__init__()
+        self.dataset = dataset
+        self.block_size = dataset.block_size
+
+    def __iter__(self) -> Iterator[dict[str, torch.Tensor]]:
+        input_buffer: list[int] = []
+        label_buffer: list[int] = []
+        emitted_supervised_tokens = 0
+
+        for encoded in self.dataset:
+            input_ids = encoded["input_ids"].tolist()
+            labels = encoded["labels"].tolist()
+            if not input_ids or not any(label != IGNORE_INDEX for label in labels):
+                continue
+
+            cursor = 0
+            while cursor < len(input_ids):
+                remaining = self.block_size - len(input_buffer)
+                if remaining <= 0:
+                    yield self._pack(input_buffer, label_buffer)
+                    input_buffer = []
+                    label_buffer = []
+                    emitted_supervised_tokens = 0
+                    remaining = self.block_size
+
+                take = min(remaining, len(input_ids) - cursor)
+                input_buffer.extend(input_ids[cursor : cursor + take])
+                label_buffer.extend(labels[cursor : cursor + take])
+                emitted_supervised_tokens += sum(
+                    1 for label in labels[cursor : cursor + take] if label != IGNORE_INDEX
+                )
+                cursor += take
+
+                if len(input_buffer) >= self.block_size:
+                    if emitted_supervised_tokens > 0:
+                        yield self._pack(input_buffer, label_buffer)
+                    input_buffer = []
+                    label_buffer = []
+                    emitted_supervised_tokens = 0
+
+        if input_buffer and emitted_supervised_tokens > 0:
+            yield self._pack(input_buffer, label_buffer)
+
+    @staticmethod
+    def _pack(input_ids: list[int], labels: list[int]) -> dict[str, torch.Tensor]:
+        return {
+            "input_ids": torch.tensor(input_ids, dtype=torch.long),
+            "attention_mask": torch.ones(len(input_ids), dtype=torch.long),
+            "labels": torch.tensor(labels, dtype=torch.long),
+        }
 
 
 def collate_sft_batch(rows: list[dict[str, torch.Tensor]]) -> dict[str, torch.Tensor]:

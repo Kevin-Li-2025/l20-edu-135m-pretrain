@@ -1,0 +1,102 @@
+{
+  "base_mean": 0.4140718995959383,
+  "candidates": [
+    {
+      "alpha": 1.0,
+      "failures": [],
+      "mean": 0.413741165906001,
+      "mean_drop": 0.00033073368993730146,
+      "name": "stage4-sft-full",
+      "path": "/home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-sft-anti-forgetting/step-005000",
+      "task_drops": {
+        "arc_challenge": -0.005972696245733766,
+        "arc_easy": 0.011363636363636409,
+        "hellaswag": 0.0004979087831109563,
+        "lambada_openai": -0.011061517562584916,
+        "piqa": 0.0016322089227421843,
+        "winogrande": 0.0055248618784530246
+      }
+    },
+    {
+      "alpha": 0.875,
+      "failures": [],
+      "mean": 0.41497374066229775,
+      "mean_drop": -0.0009018410663594323,
+      "name": "stage4-sft-a0875",
+      "path": "/home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-sft-anti-forgetting/interpolated/a0875",
+      "task_drops": {
+        "arc_challenge": -0.0034129692832764458,
+        "arc_easy": 0.008838383838383868,
+        "hellaswag": 0.0002987452698665627,
+        "lambada_openai": -0.012031826120706385,
+        "piqa": 0.0032644178454842576,
+        "winogrande": -0.0023677979479085343
+      }
+    },
+    {
+      "alpha": 0.75,
+      "failures": [],
+      "mean": 0.41332229017227656,
+      "mean_drop": 0.0007496094236617568,
+      "name": "stage4-sft-a0750",
+      "path": "/home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-sft-anti-forgetting/interpolated/a0750",
+      "task_drops": {
+        "arc_challenge": -0.005972696245733766,
+        "arc_easy": 0.009680134680134678,
+        "hellaswag": 0.00039832702648878726,
+        "lambada_openai": -0.011255579274209199,
+        "piqa": 0.0021762785636562088,
+        "winogrande": 0.009471191791633748
+      }
+    },
+    {
+      "alpha": 0.5,
+      "failures": [],
+      "mean": 0.4146470546902062,
+      "mean_drop": -0.0005751550942678652,
+      "name": "stage4-sft-a0500",
+      "path": "/home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-sft-anti-forgetting/interpolated/a0500",
+      "task_drops": {
+        "arc_challenge": -0.0017064846416382506,
+        "arc_easy": 0.007154882154882192,
+        "hellaswag": 0.0002987452698665627,
+        "lambada_openai": -0.007374345041723268,
+        "piqa": 0.0005440696409141355,
+        "winogrande": -0.0023677979479085343
+      }
+    },
+    {
+      "alpha": 0.25,
+      "failures": [],
+      "mean": 0.41384465201386794,
+      "mean_drop": 0.00022724758207037787,
+      "name": "stage4-sft-a0250",
+      "path": "/home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-sft-anti-forgetting/interpolated/a0250",
+      "task_drops": {
+        "arc_challenge": -0.0008532423208191253,
+        "arc_easy": 0.002946127946127919,
+        "hellaswag": 9.958175662222457e-05,
+        "lambada_openai": -0.00368717252086162,
+        "piqa": -0.0010881392818280489,
+        "winogrande": 0.003946329913180668
+      }
+    }
+  ],
+  "selected": {
+    "alpha": 0.875,
+    "failures": [],
+    "mean": 0.41497374066229775,
+    "mean_drop": -0.0009018410663594323,
+    "name": "stage4-sft-a0875",
+    "path": "/home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-sft-anti-forgetting/interpolated/a0875",
+    "task_drops": {
+      "arc_challenge": -0.0034129692832764458,
+      "arc_easy": 0.008838383838383868,
+      "hellaswag": 0.0002987452698665627,
+      "lambada_openai": -0.012031826120706385,
+      "piqa": 0.0032644178454842576,
+      "winogrande": -0.0023677979479085343
+    }
+  },
+  "status": "pass"
+}

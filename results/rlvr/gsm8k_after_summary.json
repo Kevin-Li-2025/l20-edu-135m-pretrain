@@ -1,0 +1,7 @@
+{
+  "accuracy": 0.01592115238817286,
+  "correct": 21,
+  "data": "data/rlvr/gsm8k_test.jsonl",
+  "model": "runs/l20-edu-135m-rlvr-gsm8k-grpo/final",
+  "n": 1319
+}
