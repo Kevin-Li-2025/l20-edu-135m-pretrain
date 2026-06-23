@@ -1,0 +1,7 @@
+Task,Metric,ours-stage2,smollm-135m,smollm2-135m,Gap vs smollm-135m,Gap vs smollm2-135m
+ARC-Challenge,"acc_norm,none",0.2807,0.2875,0.2969,-0.0068,-0.0162
+ARC-Easy,"acc_norm,none",0.5059,0.5610,0.5854,-0.0551,-0.0795
+HellaSwag,"acc_norm,none",0.3242,0.4265,0.4301,-0.1023,-0.1059
+LAMBADA OpenAI,"acc,none",,0.3757,0.4289,,
+PIQA,"acc_norm,none",0.6137,0.6823,0.6839,-0.0686,-0.0702
+WinoGrande,"acc,none",,0.5272,0.5249,,

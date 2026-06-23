@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this project, please cite it using this metadata."
+title: "L20-Edu-135M: An Auditable Single-GPU Study of Data-Efficient Small Language Modeling"
+authors:
+  - family-names: "Li"
+    given-names: "Yin"
+affiliation: "University of Birmingham"
+year: 2026
+license: MIT
+url: "https://github.com/Kevin-Li-2025/l20-edu-135m-pretrain"
+repository-code: "https://github.com/Kevin-Li-2025/l20-edu-135m-pretrain"
+abstract: "A reproducible 135M-parameter language-model training study on a single NVIDIA L20 GPU, including Stage 4 curated continuation, public baseline comparisons, SFT interpolation, and a negative GSM8K RLVR result."

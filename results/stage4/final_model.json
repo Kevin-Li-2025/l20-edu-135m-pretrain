@@ -1,0 +1,7 @@
+{
+  "base_mean": 0.4140718995959383,
+  "benchmark_mean": 0.41497374066229775,
+  "checkpoint": "/home/hhai/l20-pretrain/runs/l20-edu-135m-stage4-sft-anti-forgetting/interpolated/a0875",
+  "name": "stage4-sft-a0875",
+  "sft_alpha": 0.875
+}
