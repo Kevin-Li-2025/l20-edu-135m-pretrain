@@ -65,6 +65,7 @@ REQUIRED_FILES = [
     "results/benchmark_comparison.csv",
     "results/stage4/final_model.json",
     "results/rlvr/gsm8k_before_summary.json",
+    "scripts/audit_l20_mfu_config.py",
     "scripts/check_ablation_plan.py",
     "scripts/eval_and_reweight_mixture.py",
     "scripts/prepare_skill_targeted_corpus.py",

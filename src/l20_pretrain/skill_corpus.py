@@ -40,6 +40,13 @@ COREFERENCE_RE = re.compile(r"\b(he|she|they|him|her|them|his|hers|their|it)\b",
 CODE_RE = re.compile(r"\b(def|class|return|import|for|while|if|else|function|print)\b")
 REASONING_RE = re.compile(r"\b(therefore|because|so|step|explain|reason|answer|solution)\b", re.IGNORECASE)
 ANSWER_RE = re.compile(r"\b(answer|solution|correct option|final)\b", re.IGNORECASE)
+ANSWER_LABEL_RE = re.compile(
+    r"\b(?:answer|correct(?:\s+option|\s+continuation)?|label)\s*(?:is|:)?\s*([ABCD])\b",
+    re.IGNORECASE,
+)
+TEMPLATE_NUMBER_RE = re.compile(r"\b\d+(?:[.,:/-]\d+)*\b")
+TEMPLATE_QUOTE_RE = re.compile(r'"[^"]{4,}"|\'[^\']{4,}\'')
+TEMPLATE_CHOICE_RE = re.compile(r"\b(option|choice|answer|label|correct option)\s*[: ]\s*[abcd]\b", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -59,6 +66,38 @@ class Rejection:
     reason: str
     digest: str | None = None
     skill: str | None = None
+
+
+class BenchmarkSimilarityIndex:
+    def __init__(self, path: str | Path, *, threshold: float = 0.50):
+        self.path = Path(path)
+        self.threshold = threshold
+        self.records: list[tuple[str, set[str]]] = []
+        with self.path.open("r", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.strip()
+                if not line:
+                    continue
+                payload = json.loads(line)
+                tokens = set(normalize_tokens(str(payload.get("text", ""))))
+                if tokens:
+                    self.records.append((str(payload.get("benchmark", "unknown")), tokens))
+
+    def match(self, text: str) -> tuple[str, float] | None:
+        tokens = set(normalize_tokens(text))
+        if not tokens:
+            return None
+        best: tuple[str, float] | None = None
+        for benchmark, benchmark_tokens in self.records:
+            intersection = len(tokens & benchmark_tokens)
+            if intersection == 0:
+                continue
+            jaccard = intersection / len(tokens | benchmark_tokens)
+            containment = intersection / min(len(tokens), len(benchmark_tokens))
+            score = max(jaccard, containment)
+            if score >= self.threshold and (best is None or score > best[1]):
+                best = (benchmark, score)
+        return best
 
 
 def iter_jsonl_records(path: Path) -> Iterator[dict[str, Any]]:
@@ -141,6 +180,27 @@ def infer_skill(text: str, declared: str | None = None) -> str:
     return "general_edu"
 
 
+def template_signature(text: str, skill: str, *, max_tokens: int = 96) -> str:
+    text = TEMPLATE_QUOTE_RE.sub("<quote>", text.lower())
+    text = TEMPLATE_CHOICE_RE.sub(r"\1 <label>", text)
+    text = TEMPLATE_NUMBER_RE.sub("<num>", text)
+    tokens = normalize_tokens(text)[:max_tokens]
+    if not tokens:
+        return stable_hash(skill)
+    return stable_hash(skill + "\n" + " ".join(tokens))
+
+
+def extract_answer_label(record: dict[str, Any], text: str) -> str | None:
+    for key in ("answer", "label", "correct", "correct_answer", "target"):
+        value = record.get(key)
+        if isinstance(value, str):
+            stripped = value.strip().upper()
+            if stripped in {"A", "B", "C", "D"}:
+                return stripped
+    match = ANSWER_LABEL_RE.search(text)
+    return match.group(1).upper() if match else None
+
+
 def lexical_quality_score(text: str, skill: str) -> float:
     tokens = normalize_tokens(text)
     if not tokens:
@@ -205,6 +265,10 @@ def clean_skill_corpus(
     max_chars: int = 12000,
     max_records: int | None = None,
     source_name: str | None = None,
+    benchmark_similarity_path: str | Path | None = None,
+    benchmark_similarity_threshold: float = 0.50,
+    max_template_repeats: int = 200,
+    max_answer_label_count: int | None = None,
 ) -> dict[str, Any]:
     out_path = Path(out_jsonl)
     reject_path = out_path.with_suffix(".rejected.jsonl")
@@ -213,12 +277,22 @@ def clean_skill_corpus(
         contamination_path=contamination_path,
         max_duplicate_segment_fraction=0.25,
     )
+    benchmark_similarity = (
+        BenchmarkSimilarityIndex(
+            benchmark_similarity_path,
+            threshold=benchmark_similarity_threshold,
+        )
+        if benchmark_similarity_path
+        else None
+    )
     kept: list[dict[str, Any]] = []
     rejections: list[dict[str, Any]] = []
     counters: Counter[str] = Counter()
     skill_counts: Counter[str] = Counter()
     source_counts: Counter[str] = Counter()
     token_counts: Counter[str] = Counter()
+    template_counts: Counter[str] = Counter()
+    answer_label_counts: Counter[str] = Counter()
     seen = 0
 
     try:
@@ -262,6 +336,29 @@ def clean_skill_corpus(
                 )
                 continue
 
+            signature = template_signature(text, skill)
+            if template_counts[signature] >= max_template_repeats:
+                counters["template_cap"] += 1
+                rejections.append(
+                    asdict(Rejection(source=source, reason="template_cap", digest=record.digest, skill=skill))
+                )
+                continue
+
+            answer_label = extract_answer_label(payload, text)
+            if answer_label and max_answer_label_count is not None and answer_label_counts[answer_label] >= max_answer_label_count:
+                counters[f"answer_label_cap_{answer_label}"] += 1
+                rejections.append(
+                    asdict(
+                        Rejection(
+                            source=source,
+                            reason=f"answer_label_cap_{answer_label}",
+                            digest=record.digest,
+                            skill=skill,
+                        )
+                    )
+                )
+                continue
+
             guard_decision, signature, segments = guard.evaluate(text)
             if not guard_decision.keep:
                 reason = guard_decision.reason
@@ -273,12 +370,34 @@ def clean_skill_corpus(
                 )
                 continue
 
+            if benchmark_similarity:
+                match = benchmark_similarity.match(text)
+                if match:
+                    benchmark, score = match
+                    counters[f"benchmark_similarity:{benchmark}"] += 1
+                    rejections.append(
+                        asdict(
+                            Rejection(
+                                source=source,
+                                reason=f"benchmark_similarity:{benchmark}:{score:.3f}",
+                                digest=record.digest,
+                                skill=skill,
+                            )
+                        )
+                    )
+                    continue
+
             guard.add(text=text, source=source, signature=signature, segments=segments)
-            kept.append(asdict(record))
+            row = asdict(record)
+            if answer_label:
+                row["answer_label"] = answer_label
+                answer_label_counts[answer_label] += 1
+            kept.append(row)
             counters["kept"] += 1
             skill_counts[skill] += 1
             source_counts[source] += 1
             token_counts[skill] += record.token_count
+            template_counts[template_signature(text, skill)] += 1
     finally:
         guard.close()
 
@@ -293,10 +412,15 @@ def clean_skill_corpus(
         "rejected_output": str(reject_path),
         "guard_index": str(guard_index),
         "contamination_path": str(contamination_path) if contamination_path else None,
+        "benchmark_similarity_path": str(benchmark_similarity_path) if benchmark_similarity_path else None,
+        "benchmark_similarity_threshold": benchmark_similarity_threshold,
         "min_quality_score": min_quality_score,
         "min_chars": min_chars,
         "max_chars": max_chars,
+        "max_template_repeats": max_template_repeats,
+        "max_answer_label_count": max_answer_label_count,
         "counters": dict(sorted(counters.items())),
+        "answer_label_counts": dict(sorted(answer_label_counts.items())),
         "skill_counts": dict(sorted(skill_counts.items())),
         "source_counts": dict(sorted(source_counts.items())),
         "skill_token_counts": dict(sorted(token_counts.items())),

@@ -41,6 +41,8 @@ python scripts/check_ablation_plan.py
   skill-tags, deduplicates, and benchmark-screens targeted curriculum data.
 - `scripts/eval_and_reweight_mixture.py` converts six-task evaluation gaps into
   next-stage skill mixture weights.
+- `scripts/audit_l20_mfu_config.py` checks whether a training config is likely
+  to underuse the L20 before starting an expensive run.
 
 Exploratory files are kept when they explain a design decision, but the README
 and technical report should be treated as the public entry points.

@@ -195,5 +195,11 @@ python scripts/eval_and_reweight_mixture.py \
   --out results/ablations/next_mixture_weights.json
 ```
 
+Audit an L20 training config for MFU/tokens/sec risks:
+
+```bash
+python scripts/audit_l20_mfu_config.py configs/l20_edu_135m_benchmark_4k.yaml
+```
+
 For citation metadata, use [CITATION.cff](CITATION.cff). For a reproducibility
 manifest, see [docs/reproducibility.md](docs/reproducibility.md).
