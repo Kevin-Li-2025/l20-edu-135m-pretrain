@@ -8,6 +8,7 @@ strictly filtered Stage 4 mixture, evaluates public baselines under the same
 - Model: [AliceYin/l20-edu-135m](https://huggingface.co/AliceYin/l20-edu-135m)
 - Paper draft: [paper/l20_edu_135m_arxiv.pdf](paper/l20_edu_135m_arxiv.pdf)
 - Technical report: [docs/project_report/TECHNICAL_REPORT.md](docs/project_report/TECHNICAL_REPORT.md)
+- Next ablations: [docs/project_report/ablation_plan.json](docs/project_report/ablation_plan.json)
 - Curated result files: [results/](results/)
 
 ## Why This Repo Exists
@@ -159,6 +160,23 @@ The project is deliberately conservative:
 - negative RLVR and SFT ablation outcomes are preserved;
 - token-budget comparisons are separated from quality claims;
 - no no-contamination claim is made beyond the documented filters.
+
+## Next Research Step
+
+The next improvement target is controlled evidence rather than another
+unstructured continuation run. The committed plan tracks five experiments:
+
+- relaxed-filter control for the Stage 4 cleaning gate;
+- edu/math/code mixture-ratio ablation;
+- 2K/4K/8K sequence-length curriculum comparison;
+- SFT quality and checkpoint-interpolation study;
+- RLVR scale-threshold study for 135M versus larger future bases.
+
+Validate the plan with:
+
+```bash
+python scripts/check_ablation_plan.py
+```
 
 For citation metadata, use [CITATION.cff](CITATION.cff). For a reproducibility
 manifest, see [docs/reproducibility.md](docs/reproducibility.md).

@@ -58,12 +58,14 @@ REQUIRED_FILES = [
     "docs/README.md",
     "docs/reproducibility.md",
     "docs/project_report/TECHNICAL_REPORT.md",
+    "docs/project_report/ablation_plan.json",
     "paper/l20_edu_135m_arxiv.tex",
     "paper/l20_edu_135m_arxiv.pdf",
     "results/README.md",
     "results/benchmark_comparison.csv",
     "results/stage4/final_model.json",
     "results/rlvr/gsm8k_before_summary.json",
+    "scripts/check_ablation_plan.py",
     "src/l20_pretrain/rlvr_rewards.py",
 ]
 

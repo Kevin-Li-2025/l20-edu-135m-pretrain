@@ -15,5 +15,7 @@ jobs:
           python-version: "3.11"
       - name: Check public-release hygiene
         run: python scripts/check_repo_hygiene.py
+      - name: Check ablation plan
+        run: python scripts/check_ablation_plan.py
       - name: Compile lightweight scripts
-        run: python -m py_compile scripts/check_repo_hygiene.py scripts/summarize_rlvr_gsm8k_results.py
+        run: python -m py_compile scripts/check_repo_hygiene.py scripts/check_ablation_plan.py scripts/summarize_rlvr_gsm8k_results.py
