@@ -80,7 +80,7 @@ def minhash_signature(text: str) -> tuple[int, ...]:
 def signature_similarity(left: tuple[int, ...], right: tuple[int, ...]) -> float:
     if not left or len(left) != len(right):
         return 0.0
-    return sum(a == b for a, b in zip(left, right, strict=True)) / len(left)
+    return sum(a == b for a, b in zip(left, right)) / len(left)
 
 
 def signature_bands(signature: tuple[int, ...], rows: int = 4) -> Iterable[tuple[int, str]]:

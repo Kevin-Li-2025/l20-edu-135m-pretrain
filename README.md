@@ -178,5 +178,22 @@ Validate the plan with:
 python scripts/check_ablation_plan.py
 ```
 
+Prepare skill-targeted data with the same cleaning and contamination gate:
+
+```bash
+python scripts/prepare_skill_targeted_corpus.py data/raw_skill_mix \
+  --out data/skill_targeted/clean.jsonl \
+  --guard-index data/skill_targeted/cross_source_guard.sqlite \
+  --contamination-path data/benchmark_contamination/eval_5tasks.jsonl
+```
+
+Reweight the next curriculum stage from benchmark gaps:
+
+```bash
+python scripts/eval_and_reweight_mixture.py \
+  --scores results/stage4/final_model.json \
+  --out results/ablations/next_mixture_weights.json
+```
+
 For citation metadata, use [CITATION.cff](CITATION.cff). For a reproducibility
 manifest, see [docs/reproducibility.md](docs/reproducibility.md).

@@ -66,7 +66,10 @@ REQUIRED_FILES = [
     "results/stage4/final_model.json",
     "results/rlvr/gsm8k_before_summary.json",
     "scripts/check_ablation_plan.py",
+    "scripts/eval_and_reweight_mixture.py",
+    "scripts/prepare_skill_targeted_corpus.py",
     "src/l20_pretrain/rlvr_rewards.py",
+    "src/l20_pretrain/skill_corpus.py",
 ]
 
 

@@ -35,5 +35,12 @@ This directory separates stable public evidence from exploratory notes.
 python scripts/check_ablation_plan.py
 ```
 
+## Data Cleaning Tools
+
+- `scripts/prepare_skill_targeted_corpus.py` normalizes, quality-filters,
+  skill-tags, deduplicates, and benchmark-screens targeted curriculum data.
+- `scripts/eval_and_reweight_mixture.py` converts six-task evaluation gaps into
+  next-stage skill mixture weights.
+
 Exploratory files are kept when they explain a design decision, but the README
 and technical report should be treated as the public entry points.
