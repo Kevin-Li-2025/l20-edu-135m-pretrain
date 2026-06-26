@@ -1,0 +1,136 @@
+name: l20-v2-stage-a-targeted-pilot
+output_dir: data/l20_v2_stage_a_targeted_5k_pilot
+tokenizer: models/l20-edu-135m
+target_tokens: 47500000
+val_tokens: 524288
+block_size: 5120
+report_interval: 500
+
+data_guard:
+  enabled: true
+  index_path: data/l20_v2_stage_a_targeted_5k_pilot/cross_source_guard.sqlite
+  similarity_threshold: 0.82
+  max_duplicate_segment_fraction: 0.30
+  contamination_path: data/benchmark_contamination/eval_5tasks.jsonl
+  contamination_ngram: 13
+  contamination_lcs_threshold: 0.60
+
+sources:
+  - name: dolmino-wiki-general
+    family: general_edu
+    kind: hf_text
+    dataset: allenai/dolmino-mix-1124
+    repo_files:
+      - data/wiki/wiki-0000.json.gz
+      - data/wiki/wiki-0001.json.gz
+    text_column: text
+    weight: 0.14
+    min_chars: 600
+    max_chars: 45000
+    unique_tokens_estimate: 3700000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.48
+      max_digit_ratio: 0.25
+      min_unique_word_ratio: 0.16
+      max_repeated_ngram_fraction: 0.16
+
+  - name: fineweb-edu-targeted
+    family: edu_web
+    kind: hf_text
+    dataset: HuggingFaceFW/fineweb-edu
+    config_name: sample-10BT
+    split: train
+    text_column: text
+    weight: 0.22
+    min_chars: 700
+    max_chars: 45000
+    min_score: 3.0
+    min_int_score: 3
+    unique_tokens_estimate: 10000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.48
+      max_digit_ratio: 0.28
+      min_unique_word_ratio: 0.18
+      max_repeated_ngram_fraction: 0.16
+
+  - name: cosmopedia-v2-targeted
+    family: synthetic_textbook
+    kind: hf_text
+    dataset: HuggingFaceTB/smollm-corpus
+    config_name: cosmopedia-v2
+    split: train
+    text_column: text
+    max_files: 2
+    file_offset: 0
+    cache_files_locally: false
+    weight: 0.20
+    min_chars: 700
+    max_chars: 45000
+    unique_tokens_estimate: 28000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.45
+      max_digit_ratio: 0.35
+      min_unique_word_ratio: 0.16
+      max_repeated_ngram_fraction: 0.18
+
+  - name: dolmino-stackexchange-commonsense
+    family: explanatory_qa
+    kind: hf_text
+    dataset: allenai/dolmino-mix-1124
+    repo_files:
+      - data/stackexchange/stackexchange-0000.json.gz
+    text_column: text
+    weight: 0.18
+    min_chars: 400
+    max_chars: 45000
+    unique_tokens_estimate: 1260000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.40
+      max_digit_ratio: 0.35
+      min_unique_word_ratio: 0.14
+      max_repeated_ngram_fraction: 0.18
+
+  - name: dolmino-pes2o-science
+    family: science_reasoning
+    kind: hf_text
+    dataset: allenai/dolmino-mix-1124
+    repo_files:
+      - data/pes2o/pes2o-0000.json.gz
+    text_column: text
+    weight: 0.12
+    min_chars: 800
+    max_chars: 45000
+    unique_tokens_estimate: 58600000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.45
+      max_digit_ratio: 0.32
+      min_unique_word_ratio: 0.16
+      max_repeated_ngram_fraction: 0.16
+
+  - name: finemath-4plus-targeted
+    family: math
+    kind: hf_text
+    dataset: HuggingFaceTB/finemath
+    config_name: finemath-4plus
+    split: train
+    text_column: text
+    max_files: 4
+    file_offset: 0
+    cache_files_locally: false
+    weight: 0.08
+    min_chars: 500
+    max_chars: 45000
+    min_score: 4.0
+    min_int_score: 4
+    unique_tokens_estimate: 10000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.25
+      max_digit_ratio: 0.45
+      min_unique_word_ratio: 0.08
+      max_repeated_ngram_fraction: 0.22

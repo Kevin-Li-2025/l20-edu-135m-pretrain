@@ -252,7 +252,7 @@ def hf_dataset_parquet_files(source: SourceSpec) -> list[str] | None:
     from huggingface_hub import HfApi
 
     endpoint = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
-    token = os.environ.get("HF_TOKEN") or True
+    token = os.environ.get("HF_TOKEN")
     api = HfApi(endpoint=endpoint, token=token)
     prefix = (source.data_path or source.config_name or "").strip("/")
     files: list[str] = []
@@ -283,7 +283,7 @@ def hf_dataset_parquet_files(source: SourceSpec) -> list[str] | None:
                 url=f"{endpoint}/datasets/{source.dataset}/resolve/main/{path}",
                 repo_id=source.dataset,
                 filename=path,
-                token=token if isinstance(token, str) else os.environ.get("HF_TOKEN"),
+                token=token,
             )
             for path in files
         ]
