@@ -28,6 +28,9 @@ PROFILE_PATTERNS = (
     "speedoflight",
     "compute throughput",
     "gpu speed of light",
+    "nvgpuctrperm",
+    "performance counters",
+    "permission",
 )
 
 
@@ -196,6 +199,8 @@ def summarize_profile(profile_root: Path) -> dict[str, Any]:
     return {
         "status": "complete"
         if isinstance(status, dict) and status.get("event") == "ncu_profile_done"
+        else "failed"
+        if isinstance(status, dict) and status.get("event") == "ncu_profile_failed"
         else "present",
         "run_dir": str(run_dir),
         "status_json": status,

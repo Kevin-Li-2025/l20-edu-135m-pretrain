@@ -87,7 +87,17 @@ run_or_wait_for_profile() {
   fi
 
   json_status ncu_profile_start
+  set +e
   scripts/run_stage6_tensor_profile_after_train.sh 2>&1 | tee "$POST_DIR/tensor_profile.log"
+  profile_code=${PIPESTATUS[0]}
+  set -e
+  if [ "$profile_code" -ne 0 ]; then
+    json_status ncu_profile_failed "exit_code=$profile_code"
+    if [ "${STAGE6_REQUIRE_NCU:-0}" = "1" ]; then
+      exit "$profile_code"
+    fi
+    return
+  fi
   if ! profile_done; then
     json_status ncu_profile_missing_after_run
     echo "Nsight Compute profile did not produce a completed profile status." >&2

@@ -8,6 +8,11 @@ export HF_HUB_DISABLE_XET="${HF_HUB_DISABLE_XET:-1}"
 export TOKENIZERS_PARALLELISM=false
 export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 export PYTHONUNBUFFERED=1
+if [ -n "${PYTHONPATH:-}" ]; then
+  export PYTHONPATH="$PWD/src:$PYTHONPATH"
+else
+  export PYTHONPATH="$PWD/src"
+fi
 
 STATE_DIR=runs/stage6-edu-reasoning-state
 PROFILE_DIR=logs/stage6-edu-reasoning/profile
@@ -51,6 +56,7 @@ mkdir -p "$run_dir"
 
 echo "{\"event\":\"ncu_profile_start\",\"updated_at\":\"$(date -Is)\",\"ncu\":\"$NCU_BIN\"}" | tee "$run_dir/status.json"
 
+set +e
 "$NCU_BIN" \
   --target-processes all \
   --set roofline \
@@ -60,6 +66,14 @@ echo "{\"event\":\"ncu_profile_start\",\"updated_at\":\"$(date -Is)\",\"ncu\":\"
   --export "$run_dir/stage6_tensor_profile" \
   --log-file "$run_dir/ncu_profile.log" \
   .venv/bin/python -m l20_pretrain.train configs/l20_stage6_edu_reasoning_300m_tensor_profile.yaml
+ncu_code=$?
+set -e
+
+if [ "$ncu_code" -ne 0 ]; then
+  printf '{"event":"ncu_profile_failed","updated_at":"%s","exit_code":%s,"run_dir":"%s"}\n' \
+    "$(date -Is)" "$ncu_code" "$run_dir" | tee "$run_dir/status.json"
+  exit "$ncu_code"
+fi
 
 "$NCU_BIN" --import "$run_dir/stage6_tensor_profile.ncu-rep" --page details \
   > "$run_dir/ncu_details.txt" 2>&1 || true
