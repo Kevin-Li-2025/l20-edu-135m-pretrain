@@ -1,0 +1,189 @@
+{
+  "eval": {
+    "mean": 0.4149893272611858,
+    "path": "eval_results/stage6_edu_reasoning_300m",
+    "result_json": "eval_results/stage6_edu_reasoning_300m/runs__l20-stage6-edu-reasoning-300m__final/results_2026-06-27T19-51-51.258800.json",
+    "status": "complete",
+    "tasks": {
+      "arc_challenge": {
+        "display": "ARC-Challenge",
+        "metric": "acc_norm,none",
+        "value": 0.28668941979522183
+      },
+      "arc_easy": {
+        "display": "ARC-Easy",
+        "metric": "acc_norm,none",
+        "value": 0.49537037037037035
+      },
+      "hellaswag": {
+        "display": "HellaSwag",
+        "metric": "acc_norm,none",
+        "value": 0.32433778131846247
+      },
+      "lambada_openai": {
+        "display": "LAMBADA OpenAI",
+        "metric": "acc,none",
+        "value": 0.25732582961381717
+      },
+      "piqa": {
+        "display": "PIQA",
+        "metric": "acc_norm,none",
+        "value": 0.6218715995647442
+      },
+      "winogrande": {
+        "display": "WinoGrande",
+        "metric": "acc,none",
+        "value": 0.5043409629044988
+      }
+    }
+  },
+  "generated_at": "2026-06-27T11:51:54.023036+00:00",
+  "profile": {
+    "details_snippets": [],
+    "log_snippets": [
+      "==ERROR== ERR_NVGPUCTRPERM - The user does not have permission to access NVIDIA GPU Performance Counters on the target device 0. For instructions on enabling permissions and to get more information see https://developer.nvidia.com/ERR_NVGPUCTRPERM"
+    ],
+    "raw_csv_rows": [],
+    "report": "logs/stage6-edu-reasoning/profile/tensor_profile_20260627_194843/stage6_tensor_profile.ncu-rep",
+    "run_dir": "logs/stage6-edu-reasoning/profile/tensor_profile_20260627_194843",
+    "status": "failed",
+    "status_json": {
+      "event": "ncu_profile_failed",
+      "exit_code": 1,
+      "run_dir": "logs/stage6-edu-reasoning/profile/tensor_profile_20260627_194843",
+      "updated_at": "2026-06-27T19:49:12+08:00"
+    }
+  },
+  "train": {
+    "checkpoint_history": [
+      {
+        "event": "checkpoint",
+        "path": "runs/l20-stage6-edu-reasoning-300m/step-000500",
+        "step": 500
+      },
+      {
+        "event": "checkpoint",
+        "path": "runs/l20-stage6-edu-reasoning-300m/step-001000",
+        "step": 1000
+      },
+      {
+        "event": "checkpoint",
+        "path": "runs/l20-stage6-edu-reasoning-300m/step-001500",
+        "step": 1500
+      },
+      {
+        "event": "checkpoint",
+        "path": "runs/l20-stage6-edu-reasoning-300m/step-002000",
+        "step": 2000
+      },
+      {
+        "event": "checkpoint",
+        "path": "runs/l20-stage6-edu-reasoning-300m/step-002500",
+        "step": 2500
+      },
+      {
+        "event": "checkpoint",
+        "path": "runs/l20-stage6-edu-reasoning-300m/step-003000",
+        "step": 3000
+      }
+    ],
+    "eval_history": [
+      {
+        "event": "eval",
+        "loss": 2.79478457570076,
+        "perplexity": 16.359104224972477,
+        "step": 250
+      },
+      {
+        "event": "eval",
+        "loss": 2.7936378568410873,
+        "perplexity": 16.340355683337965,
+        "step": 500
+      },
+      {
+        "event": "eval",
+        "loss": 2.793303206562996,
+        "perplexity": 16.33488829364719,
+        "step": 750
+      },
+      {
+        "event": "eval",
+        "loss": 2.793175920844078,
+        "perplexity": 16.33280922796778,
+        "step": 1000
+      },
+      {
+        "event": "eval",
+        "loss": 2.793144941329956,
+        "perplexity": 16.332303253311114,
+        "step": 1250
+      },
+      {
+        "event": "eval",
+        "loss": 2.7931640297174454,
+        "perplexity": 16.332615013619698,
+        "step": 1500
+      },
+      {
+        "event": "eval",
+        "loss": 2.793163150548935,
+        "perplexity": 16.3326006545052,
+        "step": 1750
+      },
+      {
+        "event": "eval",
+        "loss": 2.793161317706108,
+        "perplexity": 16.33257071944268,
+        "step": 2000
+      },
+      {
+        "event": "eval",
+        "loss": 2.7931424975395203,
+        "perplexity": 16.3322633406334,
+        "step": 2250
+      },
+      {
+        "event": "eval",
+        "loss": 2.7931030839681625,
+        "perplexity": 16.331619640492136,
+        "step": 2500
+      },
+      {
+        "event": "eval",
+        "loss": 2.7931659519672394,
+        "perplexity": 16.33264640901572,
+        "step": 2750
+      },
+      {
+        "event": "eval",
+        "loss": 2.793184295296669,
+        "perplexity": 16.33294600687706,
+        "step": 3000
+      }
+    ],
+    "latest_eval": {
+      "event": "eval",
+      "loss": 2.793184295296669,
+      "perplexity": 16.33294600687706,
+      "step": 3000
+    },
+    "latest_train": {
+      "event": "train",
+      "loss": 2.92706435918808,
+      "lr": 5.000022651495003e-07,
+      "mfu": 0.7997183091620537,
+      "mfu_pct": 79.97183091620536,
+      "step": 3050,
+      "step_time_sec_window": 1.7038880825042724,
+      "tokens": 299827200,
+      "tokens_per_sec_window": 57693.93014095074
+    },
+    "log": "logs/stage6-edu-reasoning/train_stage6.log",
+    "mfu_pct_max": 82.74917219094027,
+    "mfu_pct_mean": 79.44492709656652,
+    "mfu_pct_stable_mean": 79.51663454660682,
+    "tokens_per_sec_max": 59697.58232255492,
+    "tokens_per_sec_mean": 57313.806892389686,
+    "train_event_count": 306
+  }
+}
