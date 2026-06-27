@@ -28,6 +28,16 @@ The L20 is saturated at the NVML level, but MFU is limited by end-to-end model F
   `micro_batch_size=2, grad_accum=33, gradient_checkpointing=false`.
 - Kept the same `540,672 tokens/step`, while reducing recompute overhead.
 
+## Stage6 live measurement
+
+The Stage6 300M-token edu/reasoning run uses 4096-token sequences, `micro_batch_size=6`,
+`gradient_accumulation_steps=4`, Liger kernels, BF16, fused AdamW, and PyTorch SDPA.
+During steps 100-170 on a single NVIDIA L20, the run sustained roughly
+`57.7k tokens/s` with `79.9%-80.2%` estimated MFU; the latest recorded point was
+step 170 with `57,698 tokens/s`, `79.98%` MFU, and train loss `2.8678`.
+This is a live training measurement before the first Stage6 validation checkpoint,
+not a final model-quality result.
+
 ## References
 
 - PyTorch SDPA and `torch.compile` transformer building blocks:
