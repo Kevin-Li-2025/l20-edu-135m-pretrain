@@ -100,8 +100,8 @@ sources:
     kind: hf_text
     dataset: allenai/dolmino-mix-1124
     repo_files:
-      - data/wiki/wiki-0002.json.gz
-      - data/wiki/wiki-0003.json.gz
+      - data/wiki/wiki-0000.json.gz
+      - data/wiki/wiki-0001.json.gz
     text_column: text
     weight: 0.10
     min_chars: 700

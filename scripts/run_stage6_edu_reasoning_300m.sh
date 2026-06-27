@@ -17,6 +17,13 @@ DATA_DIR=data/l20_stage6_edu_reasoning_300m
 RUN_DIR=runs/l20-stage6-edu-reasoning-300m
 mkdir -p "$STATE_DIR" "$LOG_DIR" data/benchmark_contamination models "$RUN_DIR"
 
+LOCK_FILE="$STATE_DIR/run.lock"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  echo "Stage6 runner is already active; refusing to start a second writer." >&2
+  exit 70
+fi
+
 write_state() {
   local stage="$1"
   local status="${2:-running}"
