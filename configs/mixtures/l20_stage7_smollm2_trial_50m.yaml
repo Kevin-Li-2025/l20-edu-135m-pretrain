@@ -31,12 +31,10 @@ sources:
     family: edu_web
     kind: hf_text
     dataset: HuggingFaceTB/dclm-edu
-    data_path: data
-    split: train
+    repo_files:
+      - data/001_00008.parquet
+    cache_files_locally: true
     text_column: text
-    max_files: 4
-    file_offset: 18
-    cache_files_locally: false
     weight: 0.20
     min_chars: 700
     max_chars: 45000
@@ -54,12 +52,10 @@ sources:
     family: edu_web
     kind: hf_text
     dataset: HuggingFaceTB/smollm-corpus
-    config_name: fineweb-edu-dedup
-    split: train
+    repo_files:
+      - fineweb-edu-dedup/train-00008-of-00234.parquet
+    cache_files_locally: true
     text_column: text
-    max_files: 4
-    file_offset: 8
-    cache_files_locally: false
     weight: 0.20
     min_chars: 700
     max_chars: 45000
@@ -132,12 +128,10 @@ sources:
     family: math
     kind: hf_text
     dataset: HuggingFaceTB/finemath
-    config_name: finemath-4plus
-    split: train
+    repo_files:
+      - finemath-4plus/train-00012-of-00064.parquet
+    cache_files_locally: true
     text_column: text
-    max_files: 4
-    file_offset: 12
-    cache_files_locally: false
     weight: 0.05
     min_chars: 500
     max_chars: 45000
@@ -155,12 +149,10 @@ sources:
     family: synthetic_textbook
     kind: hf_text
     dataset: HuggingFaceTB/smollm-corpus
-    config_name: cosmopedia-v2
-    split: train
+    repo_files:
+      - cosmopedia-v2/train-00010-of-00104.parquet
+    cache_files_locally: true
     text_column: text
-    max_files: 2
-    file_offset: 10
-    cache_files_locally: false
     weight: 0.03
     min_chars: 700
     max_chars: 45000
