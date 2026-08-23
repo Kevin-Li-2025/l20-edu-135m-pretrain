@@ -3,12 +3,16 @@
 An auditable single-GPU study of data-efficient 135M language-model training.
 The project trains a Llama-style decoder model from scratch, continues it on a
 strictly filtered Stage 4 mixture, evaluates public baselines under the same
-`lm-eval` harness, and records a small-model RLVR negative result.
+`lm-eval` harness, and records a small-model RLVR negative result. A separate
+A40 extension adds multi-GPU continual-pretraining and capacity-aware
+post-training infrastructure without changing the selected public checkpoint.
 
 - Model: [AliceYin/l20-edu-135m](https://huggingface.co/AliceYin/l20-edu-135m)
 - Paper draft: [paper/l20_edu_135m_arxiv.pdf](paper/l20_edu_135m_arxiv.pdf)
 - Technical report: [docs/project_report/TECHNICAL_REPORT.md](docs/project_report/TECHNICAL_REPORT.md)
 - Next ablations: [docs/project_report/ablation_plan.json](docs/project_report/ablation_plan.json)
+- A40 runbook: [A40_RUNBOOK.md](A40_RUNBOOK.md)
+- A40 efficiency study: [docs/A40_MAX_EFFICIENCY_RESEARCH.md](docs/A40_MAX_EFFICIENCY_RESEARCH.md)
 - Curated result files: [results/](results/)
 
 ## Why This Repo Exists
@@ -96,6 +100,7 @@ results/                 Curated benchmark, Stage 4, and RLVR result summaries
 scripts/                 Data prep, evaluation, reporting, and RLVR utilities
 src/l20_pretrain/        Model, data pipeline, training, SFT, and reward code
 tests/                   Unit tests for parsers, data code, and RLVR rewards
+A40_RUNBOOK.md           Five/six-A40 DDP deployment and topology checks
 ```
 
 Large artifacts are intentionally not committed: checkpoints, raw datasets,
@@ -150,6 +155,11 @@ Run the GSM8K exact-match summarizer:
 python scripts/eval_gsm8k_exact.py --help
 python scripts/summarize_rlvr_gsm8k_results.py --help
 ```
+
+For the multi-GPU continuation and post-training extension, start with
+[`A40_RUNBOOK.md`](A40_RUNBOOK.md). Its host-specific NCCL settings must be
+remeasured before reuse on a different cluster. Candidate checkpoints remain
+unpromoted until the paired benchmark and per-task regression gates pass.
 
 ## Release Discipline
 

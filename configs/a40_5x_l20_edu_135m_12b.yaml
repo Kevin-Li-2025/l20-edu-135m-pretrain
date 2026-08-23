@@ -1,0 +1,51 @@
+run_name: a40-5x-l20-edu-135m-12b
+output_dir: runs/a40-5x-l20-edu-135m-12b
+seed: 1337
+tokenizer_name: HuggingFaceTB/SmolLM2-135M
+
+dataset:
+  tokenized_path: data/fineweb_edu_2k
+  split: train
+  append_eos: true
+
+model:
+  block_size: 2048
+  hidden_size: 576
+  intermediate_size: 1536
+  num_hidden_layers: 30
+  num_attention_heads: 9
+  num_key_value_heads: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 0.000001
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+
+trainer:
+  # 5 * 32 * 3 * 2048 = 983,040 global tokens/update.
+  micro_batch_size: 32
+  gradient_accumulation_steps: 3
+  # 12,208 updates = 12,000,952,320 tokens.
+  max_steps: 12208
+  warmup_steps: 365
+  learning_rate: 0.0004
+  min_lr_ratio: 0.1
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: true
+  compile_mode: reduce-overhead
+  compile_fullgraph: false
+  liger_kernel: true
+  gradient_checkpointing: false
+  log_interval: 10
+  eval_interval: 1000
+  eval_batches: 16
+  save_interval: 1000
+  keep_last_checkpoints: 2
+  num_workers: 2
+  # Dense BF16 Tensor Core peak per A40; the trainer multiplies by world size.
+  mfu_peak_tflops: 149.7

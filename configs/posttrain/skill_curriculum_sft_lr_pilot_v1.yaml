@@ -1,0 +1,56 @@
+run_name: skill-curriculum-sft-lr-pilot-v1
+base_model: /workspace/a40-pretrain/runs/a40-5x-smollm2-continuation-2b-1k-repair-lr3e4/step-002035
+output_dir: /workspace/a40-pretrain/runs/posttrain/skill-curriculum-sft-lr-pilot-v1
+seed: 20260823
+block_size: 2048
+attn_implementation: sdpa
+
+dataset:
+  name: null
+  split: train
+  eval_split: eval
+  streaming: false
+  local_jsonl_path: /workspace/a40-pretrain/data/posttrain/skill_curriculum_v1/final/train.jsonl
+  eval_local_jsonl_path: /workspace/a40-pretrain/data/posttrain/smol_smoltalk_full_v1/eval.jsonl
+  max_examples: 200000
+  eval_max_examples: 2000
+  max_chars: 16000
+  train_on_prompt: false
+  packing: true
+  system_prompt: You are a helpful, accurate, concise AI assistant.
+
+replay:
+  tokenized_path: /workspace/a40-pretrain/data/smollm2-135m-repair-5b-tokenized
+  split: train
+  ratio: 0.10
+  seed: 20260823
+
+trainer:
+  micro_batch_size: 32
+  eval_micro_batch_size: 8
+  gradient_accumulation_steps: 1
+  max_steps: 200
+  warmup_steps: 20
+  learning_rate: 0.0003
+  min_lr_ratio: 0.1
+  lr_scheduler_type: cosine
+  lr_decay_starting_step: null
+  weight_decay: 0.0
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  liger_kernel: true
+  gradient_checkpointing: false
+  ddp_bucket_cap_mb: 100.0
+  ddp_static_graph: false
+  ddp_gradient_compression: none
+  log_interval: 10
+  eval_interval: 100
+  eval_batches: 50
+  save_interval: 200
+  save_final: true
+  keep_last_checkpoints: 1
+  num_workers: 0
+  mfu_peak_tflops: 149.7

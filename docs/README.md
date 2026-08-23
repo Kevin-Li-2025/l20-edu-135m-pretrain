@@ -14,6 +14,10 @@ This directory separates stable public evidence from exploratory notes.
   recipe.
 - [reproducibility.md](reproducibility.md): artifact map, excluded files, and
   expected reproduction path.
+- [A40_MAX_EFFICIENCY_RESEARCH.md](A40_MAX_EFFICIENCY_RESEARCH.md): measured
+  five-A40 continuation design, throughput experiments, and quality gates.
+- [../A40_RUNBOOK.md](../A40_RUNBOOK.md): deployment and topology checks for
+  five- or six-A40 nodes.
 
 ## Figures And Structured Summaries
 

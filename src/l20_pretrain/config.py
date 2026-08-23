@@ -20,6 +20,7 @@ class DatasetConfig:
     min_score: float | None = None
     min_int_score: int | None = None
     append_eos: bool = True
+    start_block_offset_per_rank: int = 0
     shuffle_buffer: int = 10000
     max_docs: int | None = None
     local_text_path: str | None = None
@@ -36,6 +37,8 @@ class ModelConfig:
     rope_theta: float = 10000.0
     rms_norm_eps: float = 1e-6
     attention_dropout: float = 0.0
+    initializer_range: float = 0.02
+    scale_residual_projections: bool = False
     tie_word_embeddings: bool = False
     vocab_multiple: int = 64
     attn_implementation: str | None = "sdpa"
@@ -50,16 +53,24 @@ class TrainerConfig:
     warmup_steps: int = 100
     learning_rate: float = 3e-4
     min_lr_ratio: float = 0.1
+    lr_scheduler_type: str = "cosine"
+    lr_decay_starting_step: int | None = None
     weight_decay: float = 0.1
     beta1: float = 0.9
     beta2: float = 0.95
     grad_clip: float = 1.0
     dtype: str = "bfloat16"
+    parameter_dtype: str = "float32"
     compile: bool = False
     compile_mode: str | None = None
     compile_fullgraph: bool | None = None
+    compile_scope: str = "model"
     liger_kernel: bool = False
+    liger_profile: str = "full"
     gradient_checkpointing: bool = False
+    ddp_bucket_cap_mb: float = 100.0
+    ddp_static_graph: bool = False
+    ddp_gradient_compression: str = "none"
     log_interval: int = 10
     eval_interval: int = 500
     eval_batches: int = 64
@@ -67,6 +78,11 @@ class TrainerConfig:
     keep_last_checkpoints: int = 2
     num_workers: int = 0
     mfu_peak_tflops: float | None = None
+    anchor_kl_weight: float = 0.0
+    anchor_kl_temperature: float = 1.0
+    anchor_kl_stride: int = 1
+    anchor_kl_chunk_size: int = 32
+    retention_gradient_accumulation_steps: int = 0
 
 
 @dataclass
@@ -76,7 +92,9 @@ class PretrainConfig:
     seed: int = 1337
     tokenizer_name: str = "HuggingFaceTB/SmolLM2-135M"
     init_model_name_or_path: str | None = None
+    anchor_model_name_or_path: str | None = None
     dataset: DatasetConfig = field(default_factory=DatasetConfig)
+    retention_dataset: DatasetConfig | None = None
     model: ModelConfig = field(default_factory=ModelConfig)
     trainer: TrainerConfig = field(default_factory=TrainerConfig)
 
@@ -92,6 +110,20 @@ class PretrainConfig:
     def planned_tokens(self) -> int:
         return self.tokens_per_step * self.trainer.max_steps
 
+    @property
+    def retention_tokens_per_step(self) -> int:
+        if self.retention_dataset is None:
+            return 0
+        return (
+            self.model.block_size
+            * self.trainer.micro_batch_size
+            * self.trainer.retention_gradient_accumulation_steps
+        )
+
+    @property
+    def target_tokens_per_step(self) -> int:
+        return self.tokens_per_step - self.retention_tokens_per_step
+
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
@@ -105,17 +137,25 @@ def load_config(path: str | Path) -> PretrainConfig:
         raw = yaml.safe_load(handle) or {}
 
     dataset = DatasetConfig(**_clean_nulls(raw.get("dataset", {})))
+    retention_raw = raw.get("retention_dataset")
+    retention_dataset = (
+        DatasetConfig(**_clean_nulls(retention_raw))
+        if isinstance(retention_raw, dict)
+        else None
+    )
     model = ModelConfig(**_clean_nulls(raw.get("model", {})))
     trainer = TrainerConfig(**_clean_nulls(raw.get("trainer", {})))
 
     top_level = {
         key: value
         for key, value in raw.items()
-        if key not in {"dataset", "model", "trainer"} and value is not None
+        if key not in {"dataset", "retention_dataset", "model", "trainer"}
+        and value is not None
     }
     return PretrainConfig(
         **top_level,
         dataset=dataset,
+        retention_dataset=retention_dataset,
         model=model,
         trainer=trainer,
     )

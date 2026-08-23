@@ -1,0 +1,53 @@
+run_name: l20-v2-stage-a-anchor-kl-005
+output_dir: runs/l20-v2-stage-a-anchor-kl-005
+seed: 20260721
+tokenizer_name: models/l20-edu-135m
+init_model_name_or_path: models/l20-edu-135m
+anchor_model_name_or_path: models/l20-edu-135m
+
+dataset:
+  tokenized_path: data/l20_v2_stage_a_targeted_5k_pilot
+  split: train
+  text_column: text
+  append_eos: true
+
+model:
+  block_size: 5120
+  hidden_size: 576
+  intermediate_size: 1536
+  num_hidden_layers: 30
+  num_attention_heads: 9
+  num_key_value_heads: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 0.000001
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+
+trainer:
+  micro_batch_size: 2
+  gradient_accumulation_steps: 4
+  max_steps: 64
+  warmup_steps: 4
+  learning_rate: 0.000003
+  min_lr_ratio: 0.20
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  liger_kernel: false
+  gradient_checkpointing: false
+  log_interval: 4
+  eval_interval: 32
+  eval_batches: 32
+  save_interval: 64
+  keep_last_checkpoints: 1
+  num_workers: 0
+  mfu_peak_tflops: 119.5
+  anchor_kl_weight: 0.05
+  anchor_kl_temperature: 1.0
+  anchor_kl_stride: 8
+  anchor_kl_chunk_size: 32
