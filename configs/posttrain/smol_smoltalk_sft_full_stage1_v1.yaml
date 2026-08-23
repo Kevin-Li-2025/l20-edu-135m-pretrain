@@ -1,0 +1,52 @@
+run_name: smol-smoltalk-sft-full-stage1-v1
+base_model: /workspace/a40-pretrain/runs/a40-5x-smollm2-continuation-2b-1k-repair-lr3e4/step-002035
+output_dir: /workspace/a40-pretrain/runs/posttrain/smol-smoltalk-sft-full-stage1-v1
+seed: 1337
+block_size: 2048
+attn_implementation: sdpa
+
+dataset:
+  name: null
+  split: train
+  eval_split: eval
+  streaming: false
+  local_jsonl_path: /workspace/a40-pretrain/data/posttrain/smol_smoltalk_full_v1/train.jsonl
+  eval_local_jsonl_path: /workspace/a40-pretrain/data/posttrain/smol_smoltalk_full_v1/eval.jsonl
+  max_examples: 454922
+  eval_max_examples: 2000
+  max_chars: 16000
+  train_on_prompt: false
+  packing: true
+  system_prompt: You are a helpful, accurate, concise AI assistant.
+
+trainer:
+  micro_batch_size: 32
+  eval_micro_batch_size: 8
+  gradient_accumulation_steps: 1
+  # About one quarter of the clean corpus. Promotion to a longer run is gated
+  # on chat quality, IFEval, and broad base-task retention at this checkpoint.
+  max_steps: 286
+  warmup_steps: 29
+  learning_rate: 0.0003
+  min_lr_ratio: 0.1
+  lr_scheduler_type: cosine
+  lr_decay_starting_step: null
+  weight_decay: 0.0
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  liger_kernel: true
+  gradient_checkpointing: false
+  ddp_bucket_cap_mb: 100.0
+  ddp_static_graph: false
+  ddp_gradient_compression: none
+  log_interval: 10
+  eval_interval: 143
+  eval_batches: 50
+  save_interval: 286
+  save_final: true
+  keep_last_checkpoints: 1
+  num_workers: 0
+  mfu_peak_tflops: 149.7

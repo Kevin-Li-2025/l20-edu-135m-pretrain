@@ -73,12 +73,20 @@ class PackedTokenDataset(IterableDataset):
         *,
         block_size: int,
         append_eos: bool = True,
+        rank: int = 0,
+        world_size: int = 1,
     ) -> None:
         super().__init__()
+        if world_size <= 0:
+            raise ValueError("world_size must be positive")
+        if not 0 <= rank < world_size:
+            raise ValueError(f"rank must be in [0, {world_size}), got {rank}")
         self.documents = documents
         self.tokenizer = tokenizer
         self.block_size = block_size
         self.append_eos = append_eos
+        self.rank = rank
+        self.world_size = world_size
 
         eos_token_id = getattr(tokenizer, "eos_token_id", None)
         if append_eos and eos_token_id is None:
@@ -86,8 +94,15 @@ class PackedTokenDataset(IterableDataset):
         self.eos_token_id = eos_token_id
 
     def __iter__(self) -> Iterator[dict[str, torch.Tensor]]:
+        worker = get_worker_info()
+        worker_id = worker.id if worker is not None else 0
+        num_workers = worker.num_workers if worker is not None else 1
+        shard_id = self.rank * num_workers + worker_id
+        num_shards = self.world_size * num_workers
         buffer: list[int] = []
-        for text in self.documents:
+        for document_index, text in enumerate(self.documents):
+            if document_index % num_shards != shard_id:
+                continue
             ids = tokenize_without_specials(self.tokenizer, text)
             if not ids:
                 continue
@@ -109,12 +124,24 @@ class TokenizedBlockDataset(IterableDataset):
         split: str,
         block_size: int,
         seed: int = 0,
+        rank: int = 0,
+        world_size: int = 1,
+        start_block_offset: int = 0,
     ) -> None:
         super().__init__()
+        if world_size <= 0:
+            raise ValueError("world_size must be positive")
+        if not 0 <= rank < world_size:
+            raise ValueError(f"rank must be in [0, {world_size}), got {rank}")
         self.root = Path(path)
         self.split = split
         self.block_size = block_size
         self.seed = seed
+        self.rank = rank
+        self.world_size = world_size
+        if start_block_offset < 0:
+            raise ValueError("start_block_offset must be non-negative")
+        self.start_block_offset = start_block_offset
         self.bin_path = self.root / f"{split}.bin"
         if not self.bin_path.exists() and split == "val":
             self.bin_path = self.root / "train.bin"
@@ -144,16 +171,24 @@ class TokenizedBlockDataset(IterableDataset):
         worker = get_worker_info()
         worker_id = worker.id if worker is not None else 0
         num_workers = worker.num_workers if worker is not None else 1
-        rng = np.random.default_rng(self.seed + worker_id * 1_000_003)
+        shard_id = self.rank * num_workers + worker_id
+        num_shards = self.world_size * num_workers
+        rng = np.random.default_rng(self.seed + shard_id * 1_000_003)
         data = np.memmap(self.bin_path, dtype=self.dtype, mode="r")
-        block_ids = np.arange(worker_id, self.num_blocks, num_workers, dtype=np.int64)
+        block_ids = np.arange(shard_id, self.num_blocks, num_shards, dtype=np.int64)
         if len(block_ids) == 0:
             return
 
+        remaining_offset = self.start_block_offset
         while True:
             order = block_ids.copy()
             rng.shuffle(order)
-            for block_id in order:
+            if remaining_offset >= len(order):
+                remaining_offset -= len(order)
+                continue
+            start = remaining_offset
+            remaining_offset = 0
+            for block_id in order[start:]:
                 start = int(block_id) * self.block_size
                 block = np.asarray(data[start : start + self.block_size], dtype=np.int64)
                 input_ids = torch.from_numpy(block.copy())
@@ -238,13 +273,20 @@ def create_packed_dataset(
     tokenizer: Any,
     *,
     block_size: int,
+    seed: int = 0,
+    rank: int = 0,
+    world_size: int = 1,
+    start_block_offset: int = 0,
 ) -> IterableDataset:
     if config.tokenized_path:
         return TokenizedBlockDataset(
             config.tokenized_path,
             split=config.split,
             block_size=block_size,
-            seed=0,
+            seed=seed,
+            rank=rank,
+            world_size=world_size,
+            start_block_offset=start_block_offset,
         )
 
     source = create_source(config)
@@ -262,4 +304,6 @@ def create_packed_dataset(
         tokenizer,
         block_size=block_size,
         append_eos=config.append_eos,
+        rank=rank,
+        world_size=world_size,
     )

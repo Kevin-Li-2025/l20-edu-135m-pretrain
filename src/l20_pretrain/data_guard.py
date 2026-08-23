@@ -24,7 +24,10 @@ NUMBER_RE = re.compile(r"\b\d+(?:[.,:/-]\d+)*\b")
 SPACE_RE = re.compile(r"\s+")
 MASK64 = (1 << 64) - 1
 MINHASH_SEEDS = np.asarray(
-    [xxhash.xxh64_intdigest(f"l20-minhash-{index}") for index in range(64)],
+    [
+        xxhash.xxh64_intdigest(f"l20-minhash-{index}".encode("utf-8"))
+        for index in range(64)
+    ],
     dtype=np.uint64,
 )
 
@@ -56,7 +59,9 @@ def word_shingle_hashes(text: str, n: int = 5, max_shingles: int = 4096) -> np.n
     if count <= 0:
         return np.empty(0, dtype=np.uint64)
     hashes = {
-        xxhash.xxh64_intdigest(" ".join(tokens[index : index + n]))
+        xxhash.xxh64_intdigest(
+            " ".join(tokens[index : index + n]).encode("utf-8")
+        )
         for index in range(count)
     }
     values = np.fromiter(hashes, dtype=np.uint64)
@@ -139,7 +144,7 @@ class BenchmarkContaminationIndex:
                 self.records.append((str(payload["benchmark"]), tokens))
                 for index in range(len(tokens) - self.ngram + 1):
                     digest = xxhash.xxh64_intdigest(
-                        " ".join(tokens[index : index + self.ngram])
+                        " ".join(tokens[index : index + self.ngram]).encode("utf-8")
                     )
                     self.ngrams[digest].append(record_id)
 
@@ -149,7 +154,9 @@ class BenchmarkContaminationIndex:
             return None
         votes: dict[int, int] = defaultdict(int)
         for index in range(len(tokens) - self.ngram + 1):
-            digest = xxhash.xxh64_intdigest(" ".join(tokens[index : index + self.ngram]))
+            digest = xxhash.xxh64_intdigest(
+                " ".join(tokens[index : index + self.ngram]).encode("utf-8")
+            )
             for record_id in self.ngrams.get(digest, ()):
                 votes[record_id] += 1
         for record_id, _ in sorted(votes.items(), key=lambda item: item[1], reverse=True)[:32]:

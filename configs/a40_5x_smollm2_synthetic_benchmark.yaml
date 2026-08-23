@@ -1,0 +1,49 @@
+run_name: a40-5x-smollm2-synthetic-benchmark
+output_dir: /tmp/a40-5x-smollm2-synthetic-benchmark
+seed: 20260821
+tokenizer_name: HuggingFaceTB/SmolLM2-135M
+init_model_name_or_path: HuggingFaceTB/SmolLM2-135M
+
+dataset:
+  tokenized_path: /tmp/l20_synthetic_2k
+  split: train
+  append_eos: true
+
+model:
+  block_size: 2048
+  hidden_size: 576
+  intermediate_size: 1536
+  num_hidden_layers: 30
+  num_attention_heads: 9
+  num_key_value_heads: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 0.00001
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+
+trainer:
+  micro_batch_size: 24
+  gradient_accumulation_steps: 4
+  max_steps: 8
+  warmup_steps: 1
+  learning_rate: 0.000005
+  min_lr_ratio: 0.1
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  parameter_dtype: float32
+  compile: false
+  liger_kernel: true
+  liger_profile: full
+  gradient_checkpointing: false
+  log_interval: 1
+  eval_interval: 0
+  eval_batches: 0
+  save_interval: 0
+  keep_last_checkpoints: 1
+  num_workers: 0
+  mfu_peak_tflops: 149.7

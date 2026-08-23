@@ -7,6 +7,7 @@ from l20_pretrain.data_guard import (
     minhash_signature,
     signature_similarity,
     token_lcs_ratio,
+    word_shingle_hashes,
 )
 
 
@@ -57,3 +58,13 @@ def test_cross_source_guard_persists_near_duplicates(tmp_path: Path) -> None:
     guard.close()
     assert not duplicate.keep
     assert duplicate.reason == "near_duplicate"
+
+
+def test_minhash_accepts_normalized_text_with_current_xxhash() -> None:
+    text = "A compact language model learns from high quality educational text."
+    hashes = word_shingle_hashes(text)
+    signature = minhash_signature(text)
+
+    assert hashes.size > 0
+    assert len(signature) == 64
+    assert signature == minhash_signature(text)

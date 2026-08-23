@@ -36,11 +36,23 @@ def iter_local_jsonl(path: str | Path) -> Iterator[dict[str, Any]]:
 
 
 class LocalJsonlExamples:
-    def __init__(self, path: str | Path) -> None:
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        rank: int = 0,
+        world_size: int = 1,
+    ) -> None:
+        if rank < 0 or world_size <= 0 or rank >= world_size:
+            raise ValueError("rank must satisfy 0 <= rank < world_size")
         self.path = Path(path)
+        self.rank = rank
+        self.world_size = world_size
 
     def __iter__(self) -> Iterator[dict[str, Any]]:
-        return iter_local_jsonl(self.path)
+        for index, row in enumerate(iter_local_jsonl(self.path)):
+            if index % self.world_size == self.rank:
+                yield row
 
 
 def _text(value: Any) -> str:
@@ -210,12 +222,34 @@ def encode_sft_example(
     if not input_ids:
         return None
 
+    eos_token_id = getattr(tokenizer, "eos_token_id", None)
+    if eos_token_id is not None:
+        input_ids.append(int(eos_token_id))
+        labels.append(int(eos_token_id))
+
+    was_truncated = len(input_ids) > block_size
     input_ids = input_ids[:block_size]
     labels = labels[:block_size]
     if not any(label != IGNORE_INDEX for label in labels):
         return None
 
+    if (
+        was_truncated
+        and eos_token_id is not None
+        and labels[-1] != IGNORE_INDEX
+    ):
+        input_ids[-1] = int(eos_token_id)
+        labels[-1] = int(eos_token_id)
+
     attention_mask = [1] * len(input_ids)
+    padding = block_size - len(input_ids)
+    if padding > 0:
+        pad_token_id = getattr(tokenizer, "pad_token_id", None)
+        if pad_token_id is None:
+            pad_token_id = eos_token_id if eos_token_id is not None else 0
+        input_ids.extend([int(pad_token_id)] * padding)
+        labels.extend([IGNORE_INDEX] * padding)
+        attention_mask.extend([0] * padding)
 
     return {
         "input_ids": torch.tensor(input_ids, dtype=torch.long),
@@ -295,8 +329,9 @@ class PackedSFTTokenDataset(IterableDataset):
         emitted_supervised_tokens = 0
 
         for encoded in self.dataset:
-            input_ids = encoded["input_ids"].tolist()
-            labels = encoded["labels"].tolist()
+            valid_length = int(encoded["attention_mask"].sum().item())
+            input_ids = encoded["input_ids"][:valid_length].tolist()
+            labels = encoded["labels"][:valid_length].tolist()
             if not input_ids or not any(label != IGNORE_INDEX for label in labels):
                 continue
 
