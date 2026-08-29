@@ -1,0 +1,56 @@
+run_name: a40-5x-smollm2-continual-repair-500m-1k-lr3e4
+output_dir: /workspace/a40-pretrain/runs/a40-5x-smollm2-continual-repair-500m-1k-lr3e4
+seed: 20260822
+tokenizer_name: HuggingFaceTB/SmolLM2-135M
+init_model_name_or_path: /workspace/a40-pretrain/runs/a40-5x-smollm2-repro-pretrain-9p8b/step-009969
+
+dataset:
+  tokenized_path: /tmp/smollm2-135m-repair-5b-tokenized
+  split: train
+  append_eos: true
+
+model:
+  # Keep tokens/update identical to the 2K pilot while measuring whether a
+  # short-sequence curriculum buys wall-clock speed without losing 2K evals.
+  block_size: 1024
+  hidden_size: 576
+  intermediate_size: 1536
+  num_hidden_layers: 30
+  num_attention_heads: 9
+  num_key_value_heads: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 0.00001
+  attention_dropout: 0.0
+  initializer_range: 0.041666666666666664
+  scale_residual_projections: true
+  tie_word_embeddings: true
+  vocab_multiple: 1
+  attn_implementation: sdpa
+
+trainer:
+  # 5 * 48 * 4 * 1024 = 983,040 tokens/update, exactly matching the 2K arm.
+  micro_batch_size: 48
+  gradient_accumulation_steps: 4
+  max_steps: 510
+  warmup_steps: 25
+  learning_rate: 0.0003
+  min_lr_ratio: 0.0
+  lr_scheduler_type: wsd
+  lr_decay_starting_step: 408
+  weight_decay: 0.01
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  parameter_dtype: float32
+  compile: false
+  liger_kernel: true
+  liger_profile: full
+  gradient_checkpointing: false
+  log_interval: 5
+  eval_interval: 100
+  eval_batches: 16
+  save_interval: 510
+  keep_last_checkpoints: 1
+  num_workers: 0
+  mfu_peak_tflops: 149.7

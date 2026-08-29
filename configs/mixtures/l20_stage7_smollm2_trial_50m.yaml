@@ -1,0 +1,180 @@
+name: l20-stage7-smollm2-trial-50m
+output_dir: data/l20_stage7_smollm2_trial_50m
+tokenizer: models/l20-edu-135m
+target_tokens: 50000000
+val_tokens: 524288
+block_size: 4096
+report_interval: 500
+
+data_guard:
+  enabled: true
+  index_path: data/l20_stage7_smollm2_trial_50m/cross_source_guard.sqlite
+  similarity_threshold: 0.82
+  max_duplicate_segment_fraction: 0.30
+  contamination_path: data/benchmark_contamination/eval_5tasks.jsonl
+  contamination_ngram: 13
+  contamination_lcs_threshold: 0.60
+
+# Stage7 is a cheap targeted ablation after Stage6 plateaued. It changes both
+# data and schedule while keeping the fast Stage6 4K training shape.
+sources:
+  - name: stage6-final-replay
+    family: replay
+    kind: tokenized_replay
+    tokenized_path: data/l20_stage6_edu_reasoning_300m
+    tokenized_split: train
+    weight: 0.20
+    max_epochs: 1.0
+    sample_seed: 20260627
+
+  - name: dclm-edu-3plus-new-shards
+    family: edu_web
+    kind: hf_text
+    dataset: HuggingFaceTB/dclm-edu
+    repo_files:
+      - data/001_00008.parquet
+    cache_files_locally: true
+    text_column: text
+    weight: 0.20
+    min_chars: 700
+    max_chars: 45000
+    min_score: 3.0
+    min_int_score: 3
+    unique_tokens_estimate: 3800000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.48
+      max_digit_ratio: 0.28
+      min_unique_word_ratio: 0.18
+      max_repeated_ngram_fraction: 0.16
+
+  - name: smollm-fineweb-edu-dedup-4plus
+    family: edu_web
+    kind: hf_text
+    dataset: HuggingFaceTB/smollm-corpus
+    repo_files:
+      - fineweb-edu-dedup/train-00008-of-00234.parquet
+    cache_files_locally: true
+    text_column: text
+    weight: 0.20
+    min_chars: 700
+    max_chars: 45000
+    min_score: 4.0
+    min_int_score: 4
+    unique_tokens_estimate: 220000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.50
+      max_digit_ratio: 0.25
+      min_unique_word_ratio: 0.18
+      max_repeated_ngram_fraction: 0.14
+
+  - name: dolmino-stackexchange-explanatory
+    family: explanatory_qa
+    kind: hf_text
+    dataset: allenai/dolmino-mix-1124
+    repo_files:
+      - data/stackexchange/stackexchange-0002.json.gz
+      - data/stackexchange/stackexchange-0003.json.gz
+    text_column: text
+    weight: 0.15
+    min_chars: 450
+    max_chars: 45000
+    unique_tokens_estimate: 1260000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.42
+      max_digit_ratio: 0.32
+      min_unique_word_ratio: 0.14
+      max_repeated_ngram_fraction: 0.16
+
+  - name: dolmino-pes2o-science
+    family: science_reasoning
+    kind: hf_text
+    dataset: allenai/dolmino-mix-1124
+    repo_files:
+      - data/pes2o/pes2o-0002.json.gz
+    text_column: text
+    weight: 0.10
+    min_chars: 800
+    max_chars: 45000
+    unique_tokens_estimate: 58600000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.45
+      max_digit_ratio: 0.32
+      min_unique_word_ratio: 0.16
+      max_repeated_ngram_fraction: 0.15
+
+  - name: dolmino-wiki-general
+    family: general_edu
+    kind: hf_text
+    dataset: allenai/dolmino-mix-1124
+    repo_files:
+      - data/wiki/wiki-0000.json.gz
+    text_column: text
+    weight: 0.05
+    min_chars: 700
+    max_chars: 45000
+    unique_tokens_estimate: 3700000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.50
+      max_digit_ratio: 0.22
+      min_unique_word_ratio: 0.17
+      max_repeated_ngram_fraction: 0.14
+
+  - name: finemath-4plus
+    family: math
+    kind: hf_text
+    dataset: HuggingFaceTB/finemath
+    repo_files:
+      - finemath-4plus/train-00012-of-00064.parquet
+    cache_files_locally: true
+    text_column: text
+    weight: 0.05
+    min_chars: 500
+    max_chars: 45000
+    min_score: 4.0
+    min_int_score: 4
+    unique_tokens_estimate: 10000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.25
+      max_digit_ratio: 0.45
+      min_unique_word_ratio: 0.08
+      max_repeated_ngram_fraction: 0.20
+
+  - name: cosmopedia-v2-textbook
+    family: synthetic_textbook
+    kind: hf_text
+    dataset: HuggingFaceTB/smollm-corpus
+    repo_files:
+      - cosmopedia-v2/train-00010-of-00104.parquet
+    cache_files_locally: true
+    text_column: text
+    weight: 0.03
+    min_chars: 700
+    max_chars: 45000
+    unique_tokens_estimate: 28000000000
+    max_epochs: 4.0
+    quality:
+      min_alpha_ratio: 0.46
+      max_digit_ratio: 0.32
+      min_unique_word_ratio: 0.16
+      max_repeated_ngram_fraction: 0.16
+
+  - name: stack-edu-python-lite
+    family: code
+    kind: stack_edu
+    dataset: HuggingFaceTB/stack-edu
+    config_name: Python
+    split: train
+    text_column: text
+    weight: 0.02
+    min_chars: 250
+    max_chars: 60000
+    min_score: 3.5
+    min_int_score: 4
+    require_license_type: permissive
+    include_metadata_header: true

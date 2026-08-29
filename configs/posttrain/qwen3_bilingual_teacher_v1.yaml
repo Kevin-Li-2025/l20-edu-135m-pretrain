@@ -1,0 +1,28 @@
+schema_version: 1
+teacher:
+  repo_id: Qwen/Qwen3-8B
+  revision: b968826d9c46dd6066d109eabc6255188de91218
+  license: apache-2.0
+jobs:
+  path: /workspace/a40-pretrain/data/posttrain/skill_curriculum_v1/teacher/jobs.jsonl
+  sha256: f11780cea943965a3c101b562c8cbe5c61c87f7c14e113673f9057dc67d869eb
+  manifest_path: /workspace/a40-pretrain/data/posttrain/skill_curriculum_v1/teacher/jobs-manifest.json
+generation:
+  script: /workspace/a40-pretrain/scripts/generate_bilingual_teacher_sft.py
+  script_sha256: cb3667b0f9272b7b8203598e2f9a6f54de35f596d09bcc2951c9cf52b68b33e8
+  protocol: two_pass_translate_then_answer
+  seed: 20260823
+  world_size: 5
+  batch_size: 32
+  max_input_tokens: 768
+  max_new_tokens_per_pass: 384
+  dtype: bfloat16
+  attn_implementation: sdpa
+  temperature: 0.7
+  top_p: 0.8
+  top_k: 20
+  min_p: 0.0
+  length_balanced_sharding: true
+runtime:
+  torch: 2.8.0+cu128
+  transformers: 4.57.6

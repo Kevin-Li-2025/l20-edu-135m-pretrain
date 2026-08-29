@@ -3,11 +3,16 @@
 An auditable single-GPU study of data-efficient 135M language-model training.
 The project trains a Llama-style decoder model from scratch, continues it on a
 strictly filtered Stage 4 mixture, evaluates public baselines under the same
-`lm-eval` harness, and records a small-model RLVR negative result.
+`lm-eval` harness, and records a small-model RLVR negative result. A separate
+A40 extension adds multi-GPU continual-pretraining and capacity-aware
+post-training infrastructure without changing the selected public checkpoint.
 
 - Model: [AliceYin/l20-edu-135m](https://huggingface.co/AliceYin/l20-edu-135m)
 - Paper draft: [paper/l20_edu_135m_arxiv.pdf](paper/l20_edu_135m_arxiv.pdf)
 - Technical report: [docs/project_report/TECHNICAL_REPORT.md](docs/project_report/TECHNICAL_REPORT.md)
+- Next ablations: [docs/project_report/ablation_plan.json](docs/project_report/ablation_plan.json)
+- A40 runbook: [A40_RUNBOOK.md](A40_RUNBOOK.md)
+- A40 efficiency study: [docs/A40_MAX_EFFICIENCY_RESEARCH.md](docs/A40_MAX_EFFICIENCY_RESEARCH.md)
 - Curated result files: [results/](results/)
 
 ## Why This Repo Exists
@@ -95,6 +100,7 @@ results/                 Curated benchmark, Stage 4, and RLVR result summaries
 scripts/                 Data prep, evaluation, reporting, and RLVR utilities
 src/l20_pretrain/        Model, data pipeline, training, SFT, and reward code
 tests/                   Unit tests for parsers, data code, and RLVR rewards
+A40_RUNBOOK.md           Five/six-A40 DDP deployment and topology checks
 ```
 
 Large artifacts are intentionally not committed: checkpoints, raw datasets,
@@ -150,6 +156,11 @@ python scripts/eval_gsm8k_exact.py --help
 python scripts/summarize_rlvr_gsm8k_results.py --help
 ```
 
+For the multi-GPU continuation and post-training extension, start with
+[`A40_RUNBOOK.md`](A40_RUNBOOK.md). Its host-specific NCCL settings must be
+remeasured before reuse on a different cluster. Candidate checkpoints remain
+unpromoted until the paired benchmark and per-task regression gates pass.
+
 ## Release Discipline
 
 The project is deliberately conservative:
@@ -159,6 +170,46 @@ The project is deliberately conservative:
 - negative RLVR and SFT ablation outcomes are preserved;
 - token-budget comparisons are separated from quality claims;
 - no no-contamination claim is made beyond the documented filters.
+
+## Next Research Step
+
+The next improvement target is controlled evidence rather than another
+unstructured continuation run. The committed plan tracks five experiments:
+
+- relaxed-filter control for the Stage 4 cleaning gate;
+- edu/math/code mixture-ratio ablation;
+- 2K/4K/8K sequence-length curriculum comparison;
+- SFT quality and checkpoint-interpolation study;
+- RLVR scale-threshold study for 135M versus larger future bases.
+
+Validate the plan with:
+
+```bash
+python scripts/check_ablation_plan.py
+```
+
+Prepare skill-targeted data with the same cleaning and contamination gate:
+
+```bash
+python scripts/prepare_skill_targeted_corpus.py data/raw_skill_mix \
+  --out data/skill_targeted/clean.jsonl \
+  --guard-index data/skill_targeted/cross_source_guard.sqlite \
+  --contamination-path data/benchmark_contamination/eval_5tasks.jsonl
+```
+
+Reweight the next curriculum stage from benchmark gaps:
+
+```bash
+python scripts/eval_and_reweight_mixture.py \
+  --scores results/stage4/final_model.json \
+  --out results/ablations/next_mixture_weights.json
+```
+
+Audit an L20 training config for MFU/tokens/sec risks:
+
+```bash
+python scripts/audit_l20_mfu_config.py configs/l20_edu_135m_benchmark_4k.yaml
+```
 
 For citation metadata, use [CITATION.cff](CITATION.cff). For a reproducibility
 manifest, see [docs/reproducibility.md](docs/reproducibility.md).

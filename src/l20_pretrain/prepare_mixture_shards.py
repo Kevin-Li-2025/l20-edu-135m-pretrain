@@ -144,13 +144,23 @@ def format_code_document(example: dict[str, Any], text: str, *, include_metadata
 def load_streaming_dataset(source: SourceSpec) -> Any:
     if source.repo_files:
         endpoint = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
-        files = [
-            f"{endpoint}/datasets/{source.dataset}/resolve/main/{path}"
-            for path in source.repo_files
-        ]
-        if all(path.endswith((".json.gz", ".jsonl.gz")) for path in files):
-            return iter_remote_json_gz(files)
-        builder = "parquet" if all(path.endswith(".parquet") for path in files) else "json"
+        urls = [f"{endpoint}/datasets/{source.dataset}/resolve/main/{path}" for path in source.repo_files]
+        if all(path.endswith((".json.gz", ".jsonl.gz")) for path in source.repo_files):
+            return iter_remote_json_gz(urls)
+        if source.cache_files_locally and all(path.endswith(".parquet") for path in source.repo_files):
+            token = os.environ.get("HF_TOKEN")
+            files = [
+                download_parquet_to_local_cache(
+                    url=url,
+                    repo_id=source.dataset,
+                    filename=filename,
+                    token=token,
+                )
+                for url, filename in zip(urls, source.repo_files, strict=True)
+            ]
+        else:
+            files = urls
+        builder = "parquet" if all(path.endswith(".parquet") for path in source.repo_files) else "json"
         return load_dataset(builder, data_files=files, split="train", streaming=True)
 
     dataset_config = DatasetConfig(
@@ -252,7 +262,7 @@ def hf_dataset_parquet_files(source: SourceSpec) -> list[str] | None:
     from huggingface_hub import HfApi
 
     endpoint = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
-    token = os.environ.get("HF_TOKEN") or True
+    token = os.environ.get("HF_TOKEN")
     api = HfApi(endpoint=endpoint, token=token)
     prefix = (source.data_path or source.config_name or "").strip("/")
     files: list[str] = []
@@ -283,7 +293,7 @@ def hf_dataset_parquet_files(source: SourceSpec) -> list[str] | None:
                 url=f"{endpoint}/datasets/{source.dataset}/resolve/main/{path}",
                 repo_id=source.dataset,
                 filename=path,
-                token=token if isinstance(token, str) else os.environ.get("HF_TOKEN"),
+                token=token,
             )
             for path in files
         ]

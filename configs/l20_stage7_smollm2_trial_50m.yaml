@@ -1,0 +1,48 @@
+run_name: l20-stage7-smollm2-trial-50m
+output_dir: runs/l20-stage7-smollm2-trial-50m
+seed: 20260627
+tokenizer_name: models/l20-edu-135m
+init_model_name_or_path: runs/l20-stage6-edu-reasoning-300m/final
+
+dataset:
+  tokenized_path: data/l20_stage7_smollm2_trial_50m
+  split: train
+  text_column: text
+  append_eos: true
+
+model:
+  block_size: 4096
+  hidden_size: 576
+  intermediate_size: 1536
+  num_hidden_layers: 30
+  num_attention_heads: 9
+  num_key_value_heads: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 0.000001
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+
+trainer:
+  micro_batch_size: 6
+  gradient_accumulation_steps: 4
+  max_steps: 509
+  warmup_steps: 50
+  learning_rate: 0.000005
+  min_lr_ratio: 0.20
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  liger_kernel: true
+  gradient_checkpointing: false
+  log_interval: 10
+  eval_interval: 125
+  eval_batches: 16
+  save_interval: 250
+  keep_last_checkpoints: 2
+  num_workers: 0
+  mfu_peak_tflops: 119.5

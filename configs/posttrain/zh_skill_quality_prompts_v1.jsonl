@@ -1,0 +1,16 @@
+{"checks":[{"type":"exact","value":"绿色"}],"id":"zh_exact_green","max_new_tokens":12,"messages":[{"content":"只回复“绿色”两个字，不要添加标点、引号或解释。","role":"user"}]}
+{"checks":[{"pattern":"(^|\\D)95($|\\D)","type":"regex"}],"id":"zh_add_37_58","max_new_tokens":32,"messages":[{"content":"37 加 58 等于多少？请只输出数字。","role":"user"}]}
+{"checks":[{"pattern":"(^|\\D)182($|\\D)","type":"regex"}],"id":"zh_multiply_14_13","max_new_tokens":40,"messages":[{"content":"14 乘以 13 等于多少？用一句简短中文回答。","role":"user"}]}
+{"checks":[{"type":"contains_any","values":["巴黎","Paris"]}],"id":"zh_capital_france","max_new_tokens":32,"messages":[{"content":"法国的首都是哪里？请简短回答。","role":"user"}]}
+{"checks":[{"pattern":"(^|\\D)366($|\\D)","type":"regex"}],"id":"zh_leap_year_days","max_new_tokens":32,"messages":[{"content":"闰年一共有多少天？只输出数字。","role":"user"}]}
+{"checks":[{"count":4,"type":"bullet_count"}],"id":"zh_four_bullets","max_new_tokens":96,"messages":[{"content":"列出恰好四种健康的早餐食物。只使用四个项目符号，不要写开场白。","role":"user"}]}
+{"checks":[{"keys":["product","price"],"type":"json_keys"}],"id":"zh_json_product_price","max_new_tokens":64,"messages":[{"content":"只返回有效 JSON，键必须恰好是 product 和 price；product 的值为 tea，price 的值为 8。","role":"user"}]}
+{"checks":[{"type":"contains_any","values":["谢谢","感谢"]}],"id":"zh_translate_thank_you","max_new_tokens":24,"messages":[{"content":"把“Thank you”翻译成中文，只输出译文。","role":"user"}]}
+{"checks":[{"type":"contains","value":"def square"}],"id":"zh_code_square","max_new_tokens":80,"messages":[{"content":"编写一个最简 Python 函数 square，返回输入数字的平方。只输出代码。","role":"user"}]}
+{"checks":[{"type":"contains","value":"李明"}],"id":"zh_multiturn_name","max_new_tokens":24,"messages":[{"content":"请记住我的名字是李明。","role":"user"},{"content":"好的，我会记住你的名字是李明。","role":"assistant"},{"content":"我叫什么名字？只回答名字。","role":"user"}]}
+{"checks":[{"type":"exact","value":"苹果"}],"id":"zh_exact_apple","max_new_tokens":12,"messages":[{"content":"输出“苹果”两个字，不能包含其他内容。","role":"user"}]}
+{"checks":[{"pattern":"(^|\\D)9($|\\D)","type":"regex"}],"id":"zh_word_problem_total","max_new_tokens":32,"messages":[{"content":"小王有 4 本书，又买了 5 本。现在共有多少本？只输出数字。","role":"user"}]}
+{"checks":[{"type":"contains","value":"73"}],"id":"zh_compare_numbers","max_new_tokens":24,"messages":[{"content":"73 和 39 哪个数更大？只输出较大的数字。","role":"user"}]}
+{"checks":[{"type":"contains_any","values":["光","阳光"]},{"type":"contains_any","values":["植物","叶"]}],"id":"zh_photosynthesis","max_new_tokens":72,"messages":[{"content":"用不超过两句话向小学生解释光合作用。","role":"user"}]}
+{"checks":[{"type":"contains_any","values":["北京","京"]}],"id":"zh_capital_china","max_new_tokens":24,"messages":[{"content":"中国的首都是哪座城市？只回答城市名。","role":"user"}]}
+{"checks":[{"type":"exact","value":"完成"}],"id":"zh_exact_done","max_new_tokens":12,"messages":[{"content":"严格只回复“完成”，不要加句号。","role":"user"}]}

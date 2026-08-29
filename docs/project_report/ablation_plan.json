@@ -1,0 +1,166 @@
+{
+  "schema_version": 1,
+  "project": "L20-Edu-135M",
+  "purpose": "Convert the release from a strong single-run artifact into a controlled data-efficiency study.",
+  "default_eval_suite": [
+    "arc_challenge",
+    "arc_easy",
+    "hellaswag",
+    "lambada_openai",
+    "piqa",
+    "winogrande"
+  ],
+  "experiments": [
+    {
+      "id": "cleaning_relaxed_filter_control",
+      "priority": "P0",
+      "hypothesis": "The strict Stage 4 cleaning gate improves average downstream quality compared with a relaxed-filter continuation at the same token budget.",
+      "base_checkpoint": "stage4_base_parent",
+      "changed_variables": [
+        "disable cross-source MinHash/LSH near-deduplication",
+        "disable LCS >= 0.60 removal",
+        "keep benchmark 13-gram contamination check enabled"
+      ],
+      "token_budget": 250000000,
+      "estimated_wall_clock_hours_l20": 1.8,
+      "success_metric": "strict_gate_mean - relaxed_filter_mean",
+      "minimum_effect_size": 0.003,
+      "required_gates": [
+        "no benchmark contamination candidates retained",
+        "same tokenizer and model architecture",
+        "same train steps, sequence length, and optimizer schedule",
+        "six-task eval completed for both checkpoints"
+      ],
+      "expected_artifacts": [
+        "results/ablations/cleaning_relaxed_filter_control.json",
+        "docs/project_report/cleaning_ablation.md"
+      ],
+      "stop_criteria": [
+        "loss diverges by >0.15 from strict gate at matched token count",
+        "contamination gate reports retained benchmark overlap",
+        "wall clock exceeds 3 hours without completing 80% of planned tokens"
+      ]
+    },
+    {
+      "id": "mixture_ratio_edu_math_code",
+      "priority": "P0",
+      "hypothesis": "A moderate math/code/tutorial share improves ARC-Challenge without materially damaging LAMBADA and PIQA.",
+      "base_checkpoint": "stage4_base_parent",
+      "changed_variables": [
+        "edu-heavy mixture",
+        "balanced edu/math/code/tutorial mixture",
+        "math-code-heavy mixture"
+      ],
+      "token_budget": 300000000,
+      "estimated_wall_clock_hours_l20": 6.5,
+      "success_metric": "six_task_mean with per-task regression guard",
+      "minimum_effect_size": 0.004,
+      "required_gates": [
+        "same cleaning gate across all variants",
+        "same token budget across all variants",
+        "LAMBADA regression <= 0.015 absolute",
+        "PIQA regression <= 0.010 absolute"
+      ],
+      "expected_artifacts": [
+        "results/ablations/mixture_ratio_edu_math_code.json",
+        "docs/project_report/mixture_ratio_ablation.md"
+      ],
+      "stop_criteria": [
+        "any variant exceeds source epoch cap",
+        "two consecutive evals show mean below base by >0.01",
+        "prepared tokens differ by >1% between variants"
+      ]
+    },
+    {
+      "id": "context_curriculum",
+      "priority": "P1",
+      "hypothesis": "A sequence-length curriculum preserves short-task quality while enabling long-context continuation more efficiently than direct 8K training.",
+      "base_checkpoint": "stage4_base_parent",
+      "changed_variables": [
+        "2K-only continuation",
+        "2K-to-4K continuation",
+        "2K-to-4K-to-8K continuation",
+        "direct 8K continuation"
+      ],
+      "token_budget": 400000000,
+      "estimated_wall_clock_hours_l20": 10.0,
+      "success_metric": "six_task_mean plus long-context domain perplexity",
+      "minimum_effect_size": 0.003,
+      "required_gates": [
+        "same effective tokens across variants",
+        "report tokens/sec and estimated MFU by phase",
+        "six-task eval and long-context PPL eval completed"
+      ],
+      "expected_artifacts": [
+        "results/ablations/context_curriculum.json",
+        "docs/project_report/context_curriculum_ablation.md"
+      ],
+      "stop_criteria": [
+        "direct 8K throughput below 40% of 2K baseline for two eval windows",
+        "short-task mean regresses by >0.01 without long-context PPL gain",
+        "GPU memory exceeds 44 GiB reserved"
+      ]
+    },
+    {
+      "id": "sft_quality_and_blend",
+      "priority": "P0",
+      "hypothesis": "Small, high-quality SFT with interpolation improves instruction behavior without erasing base-model competence.",
+      "base_checkpoint": "stage4_base",
+      "changed_variables": [
+        "SFT data quality tier",
+        "SFT token count",
+        "blend alpha"
+      ],
+      "token_budget": 50000000,
+      "estimated_wall_clock_hours_l20": 1.0,
+      "success_metric": "instruction sanity pass rate with six-task regression guard",
+      "minimum_effect_size": 0.02,
+      "required_gates": [
+        "six-task mean regression <= 0.003 absolute",
+        "ARC-Challenge regression <= 0.005 absolute",
+        "held-out instruction sanity set improves by >=2 points",
+        "no benchmark examples in SFT data"
+      ],
+      "expected_artifacts": [
+        "results/ablations/sft_quality_and_blend.json",
+        "docs/project_report/sft_quality_ablation.md"
+      ],
+      "stop_criteria": [
+        "full SFT repeats prior regression pattern",
+        "held-out instruction improvement is below 1 point after 2 variants",
+        "SFT data duplicate rate exceeds planned cap"
+      ]
+    },
+    {
+      "id": "rlvr_scale_threshold",
+      "priority": "P2",
+      "hypothesis": "GSM8K RLVR requires a larger base model than 135M to produce stable exact-match gains.",
+      "base_checkpoint": "135m_stage4_base_and_future_350m_or_500m_base",
+      "changed_variables": [
+        "model scale",
+        "CoT SFT warmup",
+        "GRPO group size",
+        "format reward weight"
+      ],
+      "token_budget": 0,
+      "estimated_wall_clock_hours_l20": 8.0,
+      "success_metric": "GSM8K exact-match delta and prediction-rate stability",
+      "minimum_effect_size": 0.01,
+      "required_gates": [
+        "same GSM8K exact-match evaluator",
+        "same decoding settings before and after RLVR",
+        "prediction rate >= 90%",
+        "report generation length and invalid-output rate"
+      ],
+      "expected_artifacts": [
+        "results/ablations/rlvr_scale_threshold.json",
+        "docs/project_report/rlvr_scale_threshold.md"
+      ],
+      "stop_criteria": [
+        "prediction rate falls below 75%",
+        "exact match regresses for two consecutive checkpoints",
+        "reward hacking diagnostics show shorter-but-worse generations"
+      ]
+    }
+  ]
+}

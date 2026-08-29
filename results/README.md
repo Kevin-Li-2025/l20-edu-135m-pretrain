@@ -9,6 +9,8 @@ benchmark sample dumps and full run directories are excluded from Git.
   version of the same comparison.
 - [stage4/](stage4/): selected Stage 4 checkpoint, data gate, and SFT regression
   summaries.
+- [stage6/](stage6/): Stage 6 post-train summaries produced after the profiler
+  and six-task eval complete.
 - [rlvr/](rlvr/): GSM8K exact-match summaries and the recorded RLVR c320
   decision.
 

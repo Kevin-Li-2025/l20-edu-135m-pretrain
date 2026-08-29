@@ -1,0 +1,52 @@
+run_name: l20-v2-stage-b-longctx
+output_dir: runs/l20-v2-stage-b-longctx
+seed: 20260627
+tokenizer_name: models/l20-edu-135m
+init_model_name_or_path: runs/l20-v2-stage-a-5k-pilot/final
+
+dataset:
+  tokenized_path: data/l20_v2_stage_b_longctx
+  split: train
+  text_column: text
+  append_eos: true
+
+model:
+  block_size: 12288
+  hidden_size: 576
+  intermediate_size: 1536
+  num_hidden_layers: 30
+  num_attention_heads: 9
+  num_key_value_heads: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 0.000001
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+  rope_scaling:
+    rope_type: yarn
+    factor: 6.0
+    original_max_position_embeddings: 2048
+
+trainer:
+  micro_batch_size: 2
+  gradient_accumulation_steps: 4
+  max_steps: 102
+  warmup_steps: 10
+  learning_rate: 0.0000015
+  min_lr_ratio: 0.20
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  liger_kernel: true
+  gradient_checkpointing: false
+  log_interval: 5
+  eval_interval: 50
+  eval_batches: 8
+  save_interval: 50
+  keep_last_checkpoints: 2
+  num_workers: 0
+  mfu_peak_tflops: 119.5
