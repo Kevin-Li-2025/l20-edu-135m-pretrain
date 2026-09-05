@@ -17,6 +17,7 @@ import subprocess
 import tempfile
 import time
 from typing import Any
+from urllib.parse import quote
 
 import numpy as np
 import yaml
@@ -32,6 +33,7 @@ from .config import DatasetConfig
 from .data import fineweb_edu_sample_files, tokenize_without_specials
 from .data_guard import CrossSourceDataGuard
 from .prepare_shards import passes_dataset_score, write_tokens
+from .provenance import artifact_record, resolve_hf_revision
 from .quality import code_quality_filter, normalize_code_text, normalize_text, quality_filter, stable_hash
 
 
@@ -41,6 +43,7 @@ class SourceSpec:
     kind: str
     dataset: str = ""
     config_name: str | None = None
+    revision: str | None = None
     split: str = "train"
     text_column: str = "text"
     family: str = "text"
@@ -144,8 +147,9 @@ def format_code_document(example: dict[str, Any], text: str, *, include_metadata
 def load_streaming_dataset(source: SourceSpec) -> Any:
     if source.repo_files:
         endpoint = os.environ.get("HF_ENDPOINT", "https://huggingface.co").rstrip("/")
+        revision = quote(source.revision or "main", safe="")
         files = [
-            f"{endpoint}/datasets/{source.dataset}/resolve/main/{path}"
+            f"{endpoint}/datasets/{source.dataset}/resolve/{revision}/{path}"
             for path in source.repo_files
         ]
         if all(path.endswith((".json.gz", ".jsonl.gz")) for path in files):
@@ -156,6 +160,7 @@ def load_streaming_dataset(source: SourceSpec) -> Any:
     dataset_config = DatasetConfig(
         name=source.dataset,
         config_name=source.config_name,
+        revision=source.revision,
         split=source.split,
         streaming=True,
         shuffle_buffer=0,
@@ -183,6 +188,8 @@ def load_streaming_dataset(source: SourceSpec) -> Any:
     }
     if source.config_name:
         kwargs["name"] = source.config_name
+    if source.revision:
+        kwargs["revision"] = source.revision
     return load_dataset(**kwargs)
 
 
@@ -191,7 +198,8 @@ def iter_cached_parquet_files(
 ) -> Iterator[dict[str, Any]]:
     token = os.environ.get("HF_TOKEN")
     for url in urls:
-        filename = url.split("/resolve/main/", 1)[-1]
+        resolved = url.split("/resolve/", 1)[-1]
+        filename = resolved.split("/", 1)[-1]
         local_path = Path(
             download_parquet_to_local_cache(
                 url=url,
@@ -255,12 +263,14 @@ def hf_dataset_parquet_files(source: SourceSpec) -> list[str] | None:
     token = os.environ.get("HF_TOKEN") or True
     api = HfApi(endpoint=endpoint, token=token)
     prefix = (source.data_path or source.config_name or "").strip("/")
+    revision = source.revision or "main"
     files: list[str] = []
     start = max(0, source.file_offset)
     stop = None if source.max_files is None else start + max(1, source.max_files)
     for item in api.list_repo_tree(
         source.dataset,
         repo_type="dataset",
+        revision=revision,
         path_in_repo=prefix or None,
         recursive=True,
         expand=False,
@@ -278,16 +288,21 @@ def hf_dataset_parquet_files(source: SourceSpec) -> list[str] | None:
             f"No parquet files left for {source.dataset} after file_offset={source.file_offset}"
         )
     if source.cache_files_locally:
+        encoded_revision = quote(revision, safe="")
         return [
             download_parquet_to_local_cache(
-                url=f"{endpoint}/datasets/{source.dataset}/resolve/main/{path}",
+                url=f"{endpoint}/datasets/{source.dataset}/resolve/{encoded_revision}/{path}",
                 repo_id=source.dataset,
                 filename=path,
                 token=token if isinstance(token, str) else os.environ.get("HF_TOKEN"),
             )
             for path in files
         ]
-    return [f"{endpoint}/datasets/{source.dataset}/resolve/main/{path}" for path in files]
+    encoded_revision = quote(revision, safe="")
+    return [
+        f"{endpoint}/datasets/{source.dataset}/resolve/{encoded_revision}/{path}"
+        for path in files
+    ]
 
 
 def download_parquet_to_local_cache(
@@ -834,16 +849,38 @@ def main() -> None:
     args = parse_args()
     recipe = load_recipe(args.recipe)
     tokenizer_name = args.tokenizer or recipe.get("tokenizer", "AliceYin/l20-edu-135m")
+    tokenizer_revision = resolve_hf_revision(
+        tokenizer_name,
+        repo_type="model",
+        revision=recipe.get("tokenizer_revision"),
+    )
     output_dir = Path(args.output_dir or recipe["output_dir"])
     target_tokens = int(args.target_tokens or recipe.get("target_tokens", 300_000_000))
     val_tokens_target = int(args.val_tokens or recipe.get("val_tokens", 2_097_152))
     block_size = int(args.block_size or recipe.get("block_size", 8192))
     report_interval = int(args.report_interval or recipe.get("report_interval", 1000))
     sources = [SourceSpec.from_dict(raw) for raw in recipe["sources"]]
+    sources = [
+        replace(
+            source,
+            revision=resolve_hf_revision(
+                source.dataset,
+                repo_type="dataset",
+                revision=source.revision,
+            ),
+        )
+        if source.dataset
+        else source
+        for source in sources
+    ]
     quotas = compute_train_quotas(target_tokens, sources)
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        tokenizer_name,
+        revision=tokenizer_revision,
+        use_fast=True,
+    )
     eos_token_id = tokenizer.eos_token_id
     if eos_token_id is None:
         raise ValueError("Tokenizer must provide eos_token_id")
@@ -1177,6 +1214,7 @@ def main() -> None:
     metadata = {
         "dtype": "uint32",
         "tokenizer": tokenizer_name,
+        "tokenizer_revision": tokenizer_revision,
         "recipe": str(args.recipe),
         "name": recipe.get("name"),
         "block_size": block_size,
@@ -1193,6 +1231,10 @@ def main() -> None:
         "elapsed_sec": time.time() - started_at,
         "hf_endpoint": os.environ.get("HF_ENDPOINT"),
         "data_guard": guard_config,
+        "artifacts": {
+            train_path.name: artifact_record(train_path),
+            val_path.name: artifact_record(val_path),
+        },
     }
     with metadata_path.open("w", encoding="utf-8") as handle:
         json.dump(metadata, handle, indent=2, sort_keys=True)

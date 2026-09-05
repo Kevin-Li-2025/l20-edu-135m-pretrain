@@ -1,0 +1,117 @@
+{
+  "baseline": {
+    "checkpoint": "runs/l20-edu-140m-wide-fineweb-pilot-50m/step-000313",
+    "completed_train_tokens": 49999872,
+    "config": "configs/l20_140m_wide_fineweb_pilot_50m.yaml",
+    "config_sha256": "f772a3ff0b86d515eb2c7058116b7f0cec5c43d53880bb8c895ea9a11ed45d17",
+    "final_eval_loss": 5.502688616514206,
+    "final_eval_perplexity": 245.35070022457353,
+    "first_logged_train_loss": 10.957380890846252,
+    "last_logged_tokens": 47923200,
+    "last_logged_train_loss": 5.461939990520477,
+    "log": "remote_logs/wide-fineweb-pilot-1559192.out",
+    "log_sha256": "a0f00f13c34104bdefb5ac360e1668878795df11eedc7d2d8826bdda23ccaeb7",
+    "median_mfu_pct": 89.3701671906507,
+    "median_tokens_per_sec": 68592.03273917062,
+    "model_sha256": "229d2deb048b1c194eab3654bd475675411ccb4637e346cf1df91b212faa2bc9",
+    "parameters": 141576960,
+    "planned_tokens": 49999872,
+    "run_name": "l20-edu-140m-wide-fineweb-pilot-50m",
+    "trainer_state_sha256": "f5059b5445e4f33e4cc8a7145a66f4abc1d84c1081eadf4882190644ce843891"
+  },
+  "baseline_schedule_ablation": {
+    "checkpoint": "runs/l20-edu-140m-wide-fineweb-wsd-pilot-50m/step-000313",
+    "completed_train_tokens": 49999872,
+    "config": "configs/l20_140m_wide_fineweb_wsd_pilot_50m.yaml",
+    "config_sha256": "2d7ccf5a06bdbf651909cdd97d78693eea42843dafb98cde1ebd54fa37a0c75d",
+    "final_eval_loss": 5.182283103466034,
+    "final_eval_perplexity": 178.088942678912,
+    "first_logged_train_loss": 10.957380890846252,
+    "last_logged_tokens": 47923200,
+    "last_logged_train_loss": 5.1476496160030365,
+    "log": "remote_logs/wide-fineweb-wsd-pilot-1559242.out",
+    "log_sha256": "9e303811cb2a2bb8991ea2d7d30e425055f09ab05ab3b42846e5189a59f11548",
+    "median_mfu_pct": 91.49297630718316,
+    "median_tokens_per_sec": 70221.29893612853,
+    "model_sha256": "8624da510e6ed0779dcbba522ad6eaa5754132c2ae09b0e4faf94ad6291105a8",
+    "parameters": 141576960,
+    "planned_tokens": 49999872,
+    "run_name": "l20-edu-140m-wide-fineweb-wsd-pilot-50m",
+    "trainer_state_sha256": "5b589ee3d093262cc5b5dd6b3649bf8fdbe81a3f46662fbf7db7850ee2c9e9d1"
+  },
+  "baseline_schedule_comparison": {
+    "lower_eval_loss": "l20-edu-140m-wide-fineweb-wsd-pilot-50m",
+    "wsd_minus_cosine_eval_loss": -0.320405513048172
+  },
+  "candidate": {
+    "checkpoint": "runs/l20-edu-135m-fineweb-pilot-50m/step-000313",
+    "completed_train_tokens": 49999872,
+    "config": "configs/l20_135m_fineweb_pilot_50m.yaml",
+    "config_sha256": "01a55da3d7b157e38195615c6edb64fc662877522885c1309e56d0a0c45fdaa5",
+    "final_eval_loss": 5.871305048465729,
+    "final_eval_perplexity": 354.7115941570646,
+    "first_logged_train_loss": 10.930302143096924,
+    "last_logged_tokens": 47923200,
+    "last_logged_train_loss": 5.833543092012405,
+    "log": "remote_logs/fineweb-pilot-exact-1559185.out",
+    "log_sha256": "9706e7177f185b8c04efac7f4f60849bd32c15bff1b4a2cb6fa875abe759c0fe",
+    "median_mfu_pct": 80.25593173072292,
+    "median_tokens_per_sec": 53805.26186864282,
+    "model_sha256": "c9964e0a3878beb6cd0982aebf5264d522fd5446c08c627365c0a11118b064dd",
+    "parameters": 134515008,
+    "planned_tokens": 49999872,
+    "run_name": "l20-edu-135m-fineweb-pilot-50m",
+    "trainer_state_sha256": "d6cd72c5e0ea57ac96437eb32cd56818474500b5415ad2f72ff38dfa5864d96b"
+  },
+  "comparison": {
+    "candidate_minus_baseline_eval_loss": 0.3686164319515228,
+    "lower_eval_loss": "l20-edu-140m-wide-fineweb-pilot-50m"
+  },
+  "global_comparison": {
+    "completed_cells": 4,
+    "lowest_eval_loss": 5.182283103466034,
+    "winner": "l20-edu-140m-wide-fineweb-wsd-pilot-50m"
+  },
+  "matched_controls": {
+    "consumed_train_blocks": 24414,
+    "dataset_revision": "87f09149ef4734204d70ed1d046ddc9ca3f2b8f9",
+    "packed_train_blocks": 24414,
+    "planned_tokens": 49999872,
+    "seed": 20260906,
+    "tokenizer": "assets/tokenizer-smollm2-135m",
+    "train_artifact": {
+      "bytes": 200002512,
+      "sha256": "a5499ae21a23dab4b9796ddb08269babc72904e3cf4e885e62e6db05d540a6a9"
+    },
+    "val_artifact": {
+      "bytes": 2100844,
+      "sha256": "5b7d908e688d31d37a7d1970f23c4c6d1c2674033e11f189e9c9bb7091c1f6b3"
+    }
+  },
+  "schedule_ablation": {
+    "checkpoint": "runs/l20-edu-135m-fineweb-wsd-pilot-50m/step-000313",
+    "completed_train_tokens": 49999872,
+    "config": "configs/l20_135m_fineweb_wsd_pilot_50m.yaml",
+    "config_sha256": "2330cf92b1e38894e935c6fc236220e4ff775934e9a29a9d0d02c5be6c04d29d",
+    "final_eval_loss": 5.566297680139542,
+    "final_eval_perplexity": 261.4642806596851,
+    "first_logged_train_loss": 10.930302143096924,
+    "last_logged_tokens": 47923200,
+    "last_logged_train_loss": 5.525389224290848,
+    "log": "remote_logs/fineweb-wsd-pilot-1559194.out",
+    "log_sha256": "ea56a2897327bf2461edf4f3894100cbe996b64ecbe6fab2b6a758adb5e03396",
+    "median_mfu_pct": 79.79154575009689,
+    "median_tokens_per_sec": 53493.927755925215,
+    "model_sha256": "f0fff05fab778e88ba846b863281000fa30b22e65b3090db2385ac160bcdf9c4",
+    "parameters": 134515008,
+    "planned_tokens": 49999872,
+    "run_name": "l20-edu-135m-fineweb-wsd-pilot-50m",
+    "trainer_state_sha256": "8f33b3a0404c53aaa5f6146965bd9f900cc36582c5d7b0864426621e99f5868b"
+  },
+  "schedule_comparison": {
+    "lower_eval_loss": "l20-edu-135m-fineweb-wsd-pilot-50m",
+    "wsd_minus_cosine_eval_loss": -0.30500736832618713
+  },
+  "schema_version": 2,
+  "scope": "matched_50m_pilot_not_final_quality_evidence"
+}

@@ -40,6 +40,48 @@ The six-task suite is ARC-Challenge, ARC-Easy, HellaSwag, LAMBADA OpenAI, PIQA,
 and WinoGrande. Baseline numbers are self-run with the same harness protocol
 where possible, not copied from leaderboards.
 
+## Evidence Map
+
+| Claim | Committed evidence | Scope |
+| --- | --- | --- |
+| Six-task model comparison | [`results/benchmark_comparison.json`](results/benchmark_comparison.json) | Curated aggregate plus task rows |
+| Selected Stage 4 checkpoint | [`results/stage4/final_model.json`](results/stage4/final_model.json) | Release decision record |
+| Stage 4 data gate | [`results/stage4/data_gate.json`](results/stage4/data_gate.json) | Recorded filtering output, not raw corpus custody |
+| SFT selection | [`results/stage4/sft_regression_gate.json`](results/stage4/sft_regression_gate.json) | Regression-gated interpolation decision |
+| RLVR negative result | [`results/rlvr/gsm8k_c320_decision.json`](results/rlvr/gsm8k_c320_decision.json) | GSM8K experiment at this model scale |
+| Controlled 50M-token factorial | [`results/pilots/fineweb_50m_matrix_20260906.json`](results/pilots/fineweb_50m_matrix_20260906.json) | Fresh-data architecture/schedule pilot, not final quality evidence |
+| Environment and artifact manifest | [`docs/reproducibility.md`](docs/reproducibility.md) | Reproduction inputs and known gaps |
+
+The committed summaries make the release auditable, but they are not substitutes
+for raw data custody, model checkpoints, or an independent rerun. Those larger
+artifacts remain outside Git and are called out explicitly in the reports.
+
+## Controlled V2 Pilot
+
+A fresh FineWeb-Edu slice was packed once with immutable dataset and tokenizer
+revisions, then reused for a `deep/wide x cosine/WSD` factorial on RTX 4090.
+Every cell consumed 49,999,872 unique training tokens with the same seed, batch,
+optimizer controls, and independent validation shard.
+
+| Architecture | Schedule | Params | Val loss | PPL | Median tok/s | Median MFU |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| Deep-thin | cosine | 134.5M | 5.8713 | 354.71 | 53,805 | 80.26% |
+| Deep-thin | WSD | 134.5M | 5.5663 | 261.46 | 53,494 | 79.79% |
+| Wide | cosine | 141.6M | 5.5027 | 245.35 | 68,592 | 89.37% |
+| Wide | WSD | 141.6M | **5.1823** | **178.09** | **70,221** | **91.49%** |
+
+The pilot winner is wide+WSD on held-out FineWeb-Edu loss. The corresponding
+full six-task mean was 0.29827 versus 0.29902 for wide+cosine, however, so the
+loss improvement is **not** presented as a downstream-capability improvement at
+this undertrained 50M-token scale. Aggregate and raw outputs are retained in
+[`results/pilots/`](results/pilots/).
+
+The next scaling gate is a matched four-cell 1B-token rerun using
+`configs/l20_135m_fineweb_1b.yaml` through
+`configs/l20_140m_wide_fineweb_wsd_1b.yaml`. The launcher verifies the immutable
+shard manifest and refuses to overwrite an existing run before allocating four
+independent GPUs.
+
 ## Final Selected Checkpoint
 
 The selected public checkpoint is the Stage 4 SFT interpolation candidate
@@ -107,7 +149,7 @@ machine-local environment directories stay outside Git.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 Install the PyTorch build that matches your CUDA runtime before training on a
@@ -119,6 +161,43 @@ Run repository hygiene checks:
 
 ```bash
 python scripts/check_repo_hygiene.py
+```
+
+Fail fast on invalid attention shapes, schedules, token budgets, or disabled
+interval settings before allocating GPU time:
+
+```bash
+python scripts/check_pretrain_configs.py
+
+# Validate selected files and print their derived token budgets.
+python -m l20_pretrain.config \
+  configs/smoke.yaml \
+  configs/l20_edu_135m_stage4_hq_crossdedup_8k.yaml
+```
+
+Formal loss evaluation never falls back to training data. Tokenized runs must
+provide a distinct `val.bin`; streaming or raw-text runs must define a separate
+top-level `eval_dataset`. Configs without independent validation keep
+`trainer.eval_interval: 0`.
+
+Exact `--resume` is supported for immutable tokenized shards with
+`trainer.num_workers: 0`. Checkpoints save the consumed block offset plus
+Python, NumPy, CPU, and CUDA RNG state. Streaming/raw-text continuation must use
+`init_model_name_or_path`; it is intentionally rejected as an exact resume.
+For byte-exact CUDA proof runs, set `trainer.deterministic: true` and export
+`CUBLAS_WORKSPACE_CONFIG=:4096:8`; this disables faster nondeterministic CUDA
+paths. Set `dataset.allow_repetition: false` when a finite-data experiment must
+fail before training instead of silently starting a second epoch.
+
+The trainer supports `trainer.lr_schedule: cosine` and `wsd`. WSD keeps the
+peak rate stable before a configurable final `trainer.decay_fraction`; use
+schedule-matched ablations before changing a long production recipe.
+
+Newly prepared packed shards include byte counts and SHA256 digests for
+`train.bin` and `val.bin`. Verify them before allocating a run:
+
+```bash
+python scripts/verify_shard_manifest.py data/my_packed_shards
 ```
 
 Run unit tests:

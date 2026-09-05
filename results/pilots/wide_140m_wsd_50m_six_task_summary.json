@@ -1,0 +1,45 @@
+{
+  "baselines": [],
+  "candidate": "wide-140m-wsd-50m-pilot",
+  "means": {
+    "wide-140m-wsd-50m-pilot": 0.2982683054294374
+  },
+  "tasks": [
+    {
+      "display": "ARC-Challenge",
+      "metric": "acc_norm,none",
+      "task": "arc_challenge",
+      "wide-140m-wsd-50m-pilot": 0.22696245733788395
+    },
+    {
+      "display": "ARC-Easy",
+      "metric": "acc_norm,none",
+      "task": "arc_easy",
+      "wide-140m-wsd-50m-pilot": 0.2803030303030303
+    },
+    {
+      "display": "HellaSwag",
+      "metric": "acc_norm,none",
+      "task": "hellaswag",
+      "wide-140m-wsd-50m-pilot": 0.2522405895239992
+    },
+    {
+      "display": "LAMBADA OpenAI",
+      "metric": "acc,none",
+      "task": "lambada_openai",
+      "wide-140m-wsd-50m-pilot": 0.0
+    },
+    {
+      "display": "PIQA",
+      "metric": "acc_norm,none",
+      "task": "piqa",
+      "wide-140m-wsd-50m-pilot": 0.5233949945593036
+    },
+    {
+      "display": "WinoGrande",
+      "metric": "acc,none",
+      "task": "winogrande",
+      "wide-140m-wsd-50m-pilot": 0.5067087608524072
+    }
+  ]
+}

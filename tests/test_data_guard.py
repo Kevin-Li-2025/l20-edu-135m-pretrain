@@ -7,6 +7,7 @@ from l20_pretrain.data_guard import (
     minhash_signature,
     signature_similarity,
     token_lcs_ratio,
+    word_shingle_hashes,
 )
 
 
@@ -57,3 +58,9 @@ def test_cross_source_guard_persists_near_duplicates(tmp_path: Path) -> None:
     guard.close()
     assert not duplicate.keep
     assert duplicate.reason == "near_duplicate"
+
+
+def test_word_shingle_hashes_accept_unicode_text() -> None:
+    hashes = word_shingle_hashes("教育 quality 数据 pipeline with explicit bytes", n=3)
+
+    assert hashes.size > 0

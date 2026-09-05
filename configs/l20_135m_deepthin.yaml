@@ -47,7 +47,9 @@ trainer:
   compile: true
   gradient_checkpointing: true
   log_interval: 10
-  eval_interval: 500
+  # FineWeb-Edu sample-10BT exposes only a training split. Do not report
+  # train-stream loss as validation; run evaluation from an independent config.
+  eval_interval: 0
   eval_batches: 64
   save_interval: 1000
   keep_last_checkpoints: 2
