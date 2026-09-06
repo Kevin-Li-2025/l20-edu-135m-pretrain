@@ -10,6 +10,14 @@ strictly filtered Stage 4 mixture, evaluates public baselines under the same
 - Technical report: [docs/project_report/TECHNICAL_REPORT.md](docs/project_report/TECHNICAL_REPORT.md)
 - Curated result files: [results/](results/)
 
+Latest controlled experiment: the
+[FineWeb-Edu 1B schedule pair](results/fineweb_1b/README.md) completed on one
+RTX 4090 per 141.6M-wide run. WSD lowered endpoint validation perplexity by
+6.56% in one seed; the two 134.5M deep-thin runs OOMed, so the four-cell
+factorial remains incomplete. No downstream gain is established. Its corrected
+dense-BF16 MFU estimate is about 45.1%, not the archived 90.2% computed with
+the smaller, non-BF16-Tensor denominator.
+
 ## Why This Repo Exists
 
 Most public small-language-model releases hide the parts that matter for

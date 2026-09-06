@@ -6,12 +6,29 @@ requested one RTX 4090 for each independent array cell.
 
 ## Outcome
 
-| Architecture | Parameters | Schedule | State | Final validation loss | Perplexity | Median tok/s | Median MFU |
+| Architecture | Parameters | Schedule | State | Final validation loss | Perplexity | Median tok/s | Estimated BF16 MFU (corrected) |
 | --- | ---: | --- | --- | ---: | ---: | ---: | ---: |
 | Deep-thin | 134,515,008 | Cosine | OOM at step 1 | - | - | - | - |
 | Deep-thin | 134,515,008 | WSD | OOM at step 1 | - | - | - | - |
-| Wide | 141,576,960 | Cosine | Completed | 3.2223 | 25.0864 | 69,239 | 90.21% |
-| Wide | 141,576,960 | WSD | Completed | **3.1545** | **23.4402** | 69,263 | 90.24% |
+| Wide | 141,576,960 | Cosine | Completed | 3.2223 | 25.0864 | 69,239 | 45.10% |
+| Wide | 141,576,960 | WSD | Completed | **3.1545** | **23.4402** | 69,263 | 45.11% |
+
+MFU correction (September 6): the archived `median_mfu_pct` values of
+90.21%/90.24% use an 82.58 TFLOP/s denominator. That is not the dense BF16
+Tensor Core peak with FP32 accumulation. NVIDIA lists **165.2 TFLOP/s dense**
+(330.4 with sparsity) in its
+[Ada architecture whitepaper, Appendix A, page 30](https://images.nvidia.com/aem-dam/Solutions/geforce/ada/nvidia-ada-gpu-architecture.pdf#page=30).
+The corrected table applies `archived_mfu_pct * 82.58 / 165.2`. This preserves
+the original software FLOP estimate (`6N` plus its attention term); it is not
+a profiler measurement or a new training run. The raw receipt, source/config
+hashes, throughput and validation scores are unchanged. Do not quote this
+experiment as 90% BF16 MFU or as a four-GPU training run.
+
+Recompute the interpretation with:
+
+```bash
+python -c 'import json; from scripts.verify_fineweb_1b_result import interpret_bf16_mfu; print(interpret_bf16_mfu(json.load(open("results/fineweb_1b/factorial_20260906.json"))))'
+```
 
 For the completed wide pair, WSD reduced endpoint validation loss by 0.06787
 and perplexity by 6.56% relative to cosine. Throughput was effectively

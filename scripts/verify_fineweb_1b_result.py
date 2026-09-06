@@ -45,9 +45,34 @@ def verify_result(payload: dict[str, Any], *, repo_root: Path = ROOT) -> None:
     failed = [cell for cell in cells if cell.get("state") == "FAILED"]
     if len(completed) != 2 or len(failed) != 2:
         raise ValueError("expected two completed and two failed cells")
+    if {cell["role"] for cell in completed} != {"wide_cosine", "wide_wsd"}:
+        raise ValueError("only the two wide cells completed the frozen campaign")
+    controls = payload["matched_controls"]
+    for field in (
+        "block_size",
+        "micro_batch_size",
+        "gradient_accumulation_steps",
+        "tokens_per_step",
+        "max_steps",
+        "planned_tokens",
+    ):
+        if type(controls[field]) is not int or controls[field] <= 0:
+            raise ValueError(f"{field} must be a positive integer")
+    tokens_per_step = (
+        controls["block_size"]
+        * controls["micro_batch_size"]
+        * controls["gradient_accumulation_steps"]
+    )
+    if controls["tokens_per_step"] != tokens_per_step:
+        raise ValueError("inconsistent tokens_per_step")
+    if controls["planned_tokens"] != tokens_per_step * controls["max_steps"]:
+        raise ValueError("inconsistent planned_tokens")
     if any(cell.get("exit_code") != "0:0" for cell in completed):
         raise ValueError("completed cells must have a zero exit code")
-    if any((cell.get("failure") or {}).get("type") != "CUDA_OUT_OF_MEMORY" for cell in failed):
+    if any(
+        (cell.get("failure") or {}).get("type") != "CUDA_OUT_OF_MEMORY"
+        for cell in failed
+    ):
         raise ValueError("both failed cells must preserve the CUDA OOM classification")
 
     for cell in cells:
@@ -64,6 +89,12 @@ def verify_result(payload: dict[str, Any], *, repo_root: Path = ROOT) -> None:
             for field in ("final_eval_loss", "final_eval_perplexity", "median_mfu_pct"):
                 if not math.isfinite(float(cell[field])):
                     raise ValueError(f"non-finite {field} for {cell['role']}")
+            if not math.isclose(
+                math.exp(cell["final_eval_loss"]),
+                cell["final_eval_perplexity"],
+                rel_tol=1e-9,
+            ):
+                raise ValueError(f"loss/perplexity mismatch for {cell['role']}")
             for field in ("model_sha256", "trainer_state_sha256"):
                 _require_sha256(cell["checkpoint"][field], f"{cell['role']}.{field}")
             _require_sha256(cell["telemetry"]["sha256"], f"{cell['role']}.telemetry")
@@ -88,12 +119,36 @@ def verify_result(payload: dict[str, Any], *, repo_root: Path = ROOT) -> None:
         "wsd_relative_perplexity_change_pct": expected_relative_ppl,
     }
     for field, expected in checks.items():
-        if not math.isclose(float(comparison[field]), expected, rel_tol=0.0, abs_tol=1e-12):
+        if not math.isclose(
+            float(comparison[field]), expected, rel_tol=0.0, abs_tol=1e-12
+        ):
             raise ValueError(f"comparison field is inconsistent: {field}")
 
 
+def interpret_bf16_mfu(payload: dict[str, Any]) -> dict[str, float]:
+    """Rescale the archived FLOP estimate, not a new GPU performance measurement.
+
+    NVIDIA Ada whitepaper, Appendix A, printed page 30: RTX 4090 BF16
+    Tensor throughput with FP32 accumulation is 165.2 dense / 330.4 sparse.
+    The archived run used 82.58, a non-Tensor/TF32-sized denominator.
+    """
+    old_peak = payload["matched_controls"]["mfu_peak_tflops_denominator"]
+    if not math.isfinite(old_peak) or old_peak <= 0:
+        raise ValueError("invalid archived MFU denominator")
+    result = {}
+    for cell in payload["cells"]:
+        if cell["state"] == "COMPLETED":
+            value = cell["median_mfu_pct"]
+            if not math.isfinite(value) or value < 0:
+                raise ValueError("invalid archived MFU value")
+            result[cell["role"]] = value * old_peak / 165.2
+    return result
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Verify a committed FineWeb 1B receipt.")
+    parser = argparse.ArgumentParser(
+        description="Verify a committed FineWeb 1B receipt."
+    )
     parser.add_argument("receipt", type=Path)
     parser.add_argument("--repo-root", type=Path, default=ROOT)
     args = parser.parse_args()
