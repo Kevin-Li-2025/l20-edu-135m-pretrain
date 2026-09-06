@@ -1,0 +1,230 @@
+{
+  "schema_version": 1,
+  "captured_at_utc": "2026-09-06T07:24:42Z",
+  "scope": "matched_single_seed_1b_schedule_ablation_not_final_model_quality_evidence",
+  "experiment": {
+    "name": "FineWeb-Edu one-billion-token architecture-by-schedule factorial",
+    "array_job_id": "1559540",
+    "execution_scope_from_launcher": "matched_1b_factorial_not_final_quality_evidence",
+    "completed_cells": 2,
+    "failed_cells": 2
+  },
+  "execution_source": {
+    "repository": "https://github.com/yinli-systems/l20-edu-135m-pretrain",
+    "base_commit": "6796173",
+    "execution_tree_note": "The GPU host used pre-run local changes. The exact run-critical files were copied to this result branch and are pinned below. Their mtimes preceded the array start.",
+    "files": {
+      "src/l20_pretrain/train.py": "90368c2d679f96c39af7cafd191fd2ae2f9845de49cdefef90a9b246e85059c5",
+      "src/l20_pretrain/config.py": "dcd36c571b26c5cb4d0ca32324bc5b4347a39e6643a89e76281d0f2877187c12",
+      "src/l20_pretrain/data.py": "9fde0975dcad044e41d4712bb7713439bd91e7983a8b5470bc1e5102045e193d",
+      "src/l20_pretrain/data_guard.py": "bb08dd1f139f776c3d969abf108568b45af7fce756c1e2525c64067e2f442bf8",
+      "src/l20_pretrain/provenance.py": "90d4b5f6a6d9a3edba1856bc88c53a36f27b656408c5714e7bbd24e298ee8a51",
+      "scripts/verify_shard_manifest.py": "a2f8a74f41a960f0366b07ba936ee6823d7e2519737cbca70362d3d14adc06cc",
+      "scripts/slurm_fineweb_1b_factorial.sh": "7634aa63141ab42c8291596601b34cdf1074f8b8aa0e98df0576699dc03b8305"
+    }
+  },
+  "dataset": {
+    "name": "HuggingFaceFW/fineweb-edu",
+    "config_name": "sample-10BT",
+    "revision": "87f09149ef4734204d70ed1d046ddc9ca3f2b8f9",
+    "tokenizer_revision": "93efa2f097d58c2a74874c7e644dbc9b0cee75a2",
+    "metadata_sha256": "90f7cc2fd4041456b3593dae3eff81864e6ebe8f42cd142cb3ea492819a95397",
+    "train_tokens": 1000000750,
+    "validation_tokens": 4194596,
+    "train_blocks": 488281,
+    "validation_blocks": 2048,
+    "artifacts": {
+      "train.bin": {
+        "bytes": 4000003000,
+        "sha256": "2a252c397d1a76303a463587c912d889c1248876e52eff91203fdb79ad8689bf"
+      },
+      "val.bin": {
+        "bytes": 16778384,
+        "sha256": "c5d4e4f09413cff6c945e67a35de7465514714e188914915c6ebff1e981a33e9"
+      }
+    },
+    "verification": "Both packed artifacts passed byte-count and full SHA256 verification before every array cell. Training and validation used distinct files."
+  },
+  "matched_controls": {
+    "seed": 20260906,
+    "block_size": 2048,
+    "micro_batch_size": 6,
+    "gradient_accumulation_steps": 13,
+    "tokens_per_step": 159744,
+    "max_steps": 6260,
+    "planned_tokens": 999997440,
+    "warmup_steps": 626,
+    "peak_learning_rate": 0.0004,
+    "weight_decay": 0.1,
+    "dtype": "bfloat16",
+    "compile": false,
+    "gradient_checkpointing": false,
+    "attention_implementation": "sdpa",
+    "hardware_class": "single RTX 4090 per cell",
+    "mfu_peak_tflops_denominator": 82.58
+  },
+  "cells": [
+    {
+      "cell": 0,
+      "role": "deep_thin_cosine",
+      "job_id": "1559541",
+      "node": "wqd10nae09g3",
+      "state": "FAILED",
+      "exit_code": "1:0",
+      "started_at": "2026-09-06T09:52:24+08:00",
+      "ended_at": "2026-09-06T09:53:11+08:00",
+      "elapsed_seconds": 47,
+      "parameters": 134515008,
+      "config": "configs/l20_135m_fineweb_1b.yaml",
+      "config_sha256": "c574e1065130c868734a4fe7287a2ac968760f3bfea80085e17c72dfe2855e30",
+      "schedule": {
+        "name": "cosine",
+        "min_lr_ratio": 0.1
+      },
+      "last_step": 1,
+      "log_sha256": "7f8d6d61cb82749ac50bc10161e0a53e68ecaa3aed87a49eae7e076c49642326",
+      "stderr_sha256": "670d25dc75ef673aabc44feae8436c3292bfee39cf01575e192f1da44ea56fec",
+      "failure": {
+        "type": "CUDA_OUT_OF_MEMORY",
+        "phase": "backward",
+        "requested_gib": 2.25,
+        "reported_total_gib": 22.02,
+        "reported_free_gib": 1.48
+      }
+    },
+    {
+      "cell": 1,
+      "role": "deep_thin_wsd",
+      "job_id": "1559542",
+      "node": "wqd10naf06g3",
+      "state": "FAILED",
+      "exit_code": "1:0",
+      "started_at": "2026-09-06T09:52:24+08:00",
+      "ended_at": "2026-09-06T09:52:57+08:00",
+      "elapsed_seconds": 33,
+      "parameters": 134515008,
+      "config": "configs/l20_135m_fineweb_wsd_1b.yaml",
+      "config_sha256": "3ab04e37f4f0562f7d3435e5098751304b969450156dc057fa51b189c0b88c8a",
+      "schedule": {
+        "name": "wsd",
+        "min_lr_ratio": 0.0,
+        "decay_fraction": 0.2
+      },
+      "last_step": 1,
+      "log_sha256": "b5010f978be3653bbdb0284b3ffc7fa4e5b4cd2a0f5ed6392216116228ebf6f4",
+      "stderr_sha256": "71e4a643a165e8fa09728d55e294dd6c137fecbd1cd61335e984dda018b1c46c",
+      "failure": {
+        "type": "CUDA_OUT_OF_MEMORY",
+        "phase": "backward",
+        "requested_gib": 2.25,
+        "reported_total_gib": 22.03,
+        "reported_free_gib": 1.49
+      }
+    },
+    {
+      "cell": 2,
+      "role": "wide_cosine",
+      "job_id": "1559543",
+      "node": "wqd10naf13g1",
+      "state": "COMPLETED",
+      "exit_code": "0:0",
+      "started_at": "2026-09-06T09:52:24+08:00",
+      "ended_at": "2026-09-06T13:54:48+08:00",
+      "elapsed_seconds": 14544,
+      "parameters": 141576960,
+      "config": "configs/l20_140m_wide_fineweb_1b.yaml",
+      "config_sha256": "e9f0f1222c25a96c236be13feaf3df0ec89e5f756a0d6869bcc059fe0690272f",
+      "schedule": {
+        "name": "cosine",
+        "min_lr_ratio": 0.1
+      },
+      "final_step": 6260,
+      "final_eval_loss": 3.2223242642357945,
+      "final_eval_perplexity": 25.086359801879503,
+      "median_tokens_per_second": 69239.17218560525,
+      "median_mfu_pct": 90.2133403437697,
+      "log_sha256": "0474e7d6c04d5dd49a3f3d34a6234d403c08eeb280b6822ce715a72682357705",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "telemetry": {
+        "sha256": "159ecd7183ee7ba03d60497783a2a5a7c53c6734dae90f811f00545ac41637d4",
+        "samples": 1454,
+        "median_gpu_utilization_pct": 100.0,
+        "median_memory_used_mib": 19069.0,
+        "median_power_w": 405.39
+      },
+      "checkpoint": {
+        "remote_path": "runs/l20-edu-140m-wide-fineweb-1b/step-006260",
+        "model_bytes": 566320072,
+        "model_sha256": "9be30de433a7e88ae3bff9d995acd54849a5c8ea37844e995d3c1d446a1f5fc4",
+        "trainer_state_bytes": 1132725843,
+        "trainer_state_sha256": "b417219fd6105c77d166b2e0c1b79177cea03db1b59c492843dd1373f03a40bc"
+      }
+    },
+    {
+      "cell": 3,
+      "role": "wide_wsd",
+      "job_id": "1559540",
+      "node": "wqd10naf13g7",
+      "state": "COMPLETED",
+      "exit_code": "0:0",
+      "started_at": "2026-09-06T09:52:24+08:00",
+      "ended_at": "2026-09-06T13:54:33+08:00",
+      "elapsed_seconds": 14529,
+      "parameters": 141576960,
+      "config": "configs/l20_140m_wide_fineweb_wsd_1b.yaml",
+      "config_sha256": "4facbbadc42a14b07e39eac117cb125794a531c2813fb92d44fc1a632208f0c9",
+      "schedule": {
+        "name": "wsd",
+        "min_lr_ratio": 0.0,
+        "decay_fraction": 0.2
+      },
+      "final_step": 6260,
+      "final_eval_loss": 3.154453639872372,
+      "final_eval_perplexity": 23.440226786930953,
+      "median_tokens_per_second": 69262.76118987957,
+      "median_mfu_pct": 90.2440750103435,
+      "log_sha256": "43e91371758246fca7fba62254bcb3e844b81ea42328947e99ae88d48aab21ea",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "telemetry": {
+        "sha256": "adbb445edec83741b87e19bf712ec29bc16712366efe96667b1b788b591f9751",
+        "samples": 1453,
+        "median_gpu_utilization_pct": 100.0,
+        "median_memory_used_mib": 19069.0,
+        "median_power_w": 375.68
+      },
+      "checkpoint": {
+        "remote_path": "runs/l20-edu-140m-wide-fineweb-wsd-1b/step-006260",
+        "model_bytes": 566320072,
+        "model_sha256": "e639fba8ad7acd20fda29434da6a9437631f8288722f18ef0ab638828138d1f7",
+        "trainer_state_bytes": 1132725843,
+        "trainer_state_sha256": "fbaea9fe4b651fcbe08db80ce258389f6f1afb24c015c8a19f719744b07ebdc6"
+      }
+    }
+  ],
+  "wide_schedule_comparison": {
+    "preferred_by_final_validation": "wide_wsd",
+    "wsd_minus_cosine_eval_loss": -0.0678706243634224,
+    "wsd_minus_cosine_perplexity": -1.6461330149485498,
+    "wsd_relative_perplexity_change_pct": -6.56186480600992,
+    "median_throughput_relative_change_pct": 0.034068939072081195,
+    "interpretation": "At the matched one-billion-token endpoint, the single WSD run had lower held-out loss and perplexity with effectively unchanged throughput."
+  },
+  "claim_boundary": {
+    "supported": [
+      "Both 141.6M-wide single-GPU cells completed the matched 999,997,440-token protocol.",
+      "The WSD cell had 0.06787 lower final held-out loss and 6.56% lower perplexity than the cosine cell in this single-seed run.",
+      "Median software-estimated MFU was about 90.2% for both completed cells under the stated 82.58-TFLOP/s denominator."
+    ],
+    "not_supported": [
+      "A complete four-cell one-billion-token factorial: both 134.5M deep-thin cells failed at step 1 with CUDA OOM.",
+      "A multi-seed or statistically powered schedule superiority claim.",
+      "A downstream-task, leaderboard, production, or final-model quality improvement claim.",
+      "A four-GPU MFU claim: every factorial cell used one RTX 4090."
+    ],
+    "additional_limitations": [
+      "The two completed cells ran on separate nodes and deterministic algorithms were disabled.",
+      "MFU is a software estimate whose meaning depends on the recorded FLOP model and 82.58-TFLOP/s denominator.",
+      "Raw logs, telemetry CSVs, token shards, and checkpoints are excluded from Git; their digests and sizes are retained here."
+    ]
+  }
+}

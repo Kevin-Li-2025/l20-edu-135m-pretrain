@@ -52,6 +52,12 @@ python -m l20_pretrain.train configs/l20_edu_135m_stage4_hq_crossdedup_8k.yaml
 Exact wall-clock time depends on host I/O, PyTorch/CUDA versions, context
 length, and whether the optimized short-context configuration is used.
 
+Formal validation is fail-closed: tokenized training requires a distinct
+`val.bin`, while streaming/raw-text training requires an explicit independent
+`eval_dataset`. Exact interrupted-run resume is limited to immutable tokenized
+shards with zero data-loader workers; trainer state records data position and
+all relevant random-number-generator states.
+
 ## Benchmark Caveats
 
 The six-task public comparison uses the same harness protocol where practical,
