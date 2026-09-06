@@ -10,6 +10,14 @@ strictly filtered Stage 4 mixture, evaluates public baselines under the same
 - Technical report: [docs/project_report/TECHNICAL_REPORT.md](docs/project_report/TECHNICAL_REPORT.md)
 - Curated result files: [results/](results/)
 
+Latest controlled experiment: the
+[FineWeb-Edu 1B schedule pair](results/fineweb_1b/README.md) completed on one
+RTX 4090 per 141.6M-wide run. WSD lowered endpoint validation perplexity by
+6.56% in one seed; the two 134.5M deep-thin runs OOMed, so the four-cell
+factorial remains incomplete. No downstream gain is established. Its corrected
+dense-BF16 MFU estimate is about 45.1%, not the archived 90.2% computed with
+the smaller, non-BF16-Tensor denominator.
+
 ## Why This Repo Exists
 
 Most public small-language-model releases hide the parts that matter for
@@ -39,6 +47,22 @@ SmolLM2-135M is about 84.4% of the mean with about 0.65% of the token budget.
 The six-task suite is ARC-Challenge, ARC-Easy, HellaSwag, LAMBADA OpenAI, PIQA,
 and WinoGrande. Baseline numbers are self-run with the same harness protocol
 where possible, not copied from leaderboards.
+
+## Evidence Map
+
+| Claim | Committed evidence | Scope |
+| --- | --- | --- |
+| Six-task model comparison | [`results/benchmark_comparison.json`](results/benchmark_comparison.json) | Curated aggregate plus task rows |
+| Selected Stage 4 checkpoint | [`results/stage4/final_model.json`](results/stage4/final_model.json) | Release decision record |
+| Stage 4 data gate | [`results/stage4/data_gate.json`](results/stage4/data_gate.json) | Recorded filtering output, not raw corpus custody |
+| SFT selection | [`results/stage4/sft_regression_gate.json`](results/stage4/sft_regression_gate.json) | Regression-gated interpolation decision |
+| RLVR negative result | [`results/rlvr/gsm8k_c320_decision.json`](results/rlvr/gsm8k_c320_decision.json) | GSM8K experiment at this model scale |
+| FineWeb-Edu 1B schedule ablation | [`results/fineweb_1b/factorial_20260906.json`](results/fineweb_1b/factorial_20260906.json) | Two completed 141.6M-wide cells plus two preserved 134.5M OOM cells |
+| Environment and artifact manifest | [`docs/reproducibility.md`](docs/reproducibility.md) | Reproduction inputs and known gaps |
+
+The committed summaries make the release auditable, but they are not substitutes
+for raw data custody, model checkpoints, or an independent rerun. Those larger
+artifacts remain outside Git and are called out explicitly in the reports.
 
 ## Final Selected Checkpoint
 
@@ -107,7 +131,7 @@ machine-local environment directories stay outside Git.
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 Install the PyTorch build that matches your CUDA runtime before training on a
@@ -119,6 +143,35 @@ Run repository hygiene checks:
 
 ```bash
 python scripts/check_repo_hygiene.py
+```
+
+Fail fast on invalid attention shapes, schedules, token budgets, or disabled
+interval settings before allocating GPU time:
+
+```bash
+python scripts/check_pretrain_configs.py
+
+# Validate selected files and print their derived token budgets.
+python -m l20_pretrain.config \
+  configs/smoke.yaml \
+  configs/l20_edu_135m_stage4_hq_crossdedup_8k.yaml
+```
+
+Formal loss evaluation never falls back to training data. Tokenized runs must
+provide a distinct `val.bin`; streaming or raw-text runs must define a separate
+top-level `eval_dataset`. Configs without independent validation keep
+`trainer.eval_interval: 0`.
+
+Exact `--resume` is supported for immutable tokenized shards with
+`trainer.num_workers: 0`. Checkpoints save the consumed block offset plus
+Python, NumPy, CPU, and CUDA RNG state. Streaming/raw-text continuation must use
+`init_model_name_or_path`; it is intentionally rejected as an exact resume.
+
+Newly prepared packed shards include byte counts and SHA256 digests for
+`train.bin` and `val.bin`. Verify them before allocating a run:
+
+```bash
+python scripts/verify_shard_manifest.py data/my_packed_shards
 ```
 
 Run unit tests:

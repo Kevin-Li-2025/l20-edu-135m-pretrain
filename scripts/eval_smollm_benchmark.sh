@@ -7,6 +7,7 @@ DTYPE="${DTYPE:-bfloat16}"
 BATCH_SIZE="${BATCH_SIZE:-auto}"
 MAX_BATCH_SIZE="${MAX_BATCH_SIZE:-16}"
 SEED="${SEED:-20260612}"
+PYTHON="${PYTHON:-python3}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-eval_results/smollm_target_$(date +%Y%m%d_%H%M%S)}"
 REQUESTED_CANDIDATE="${CANDIDATE:-}"
 
@@ -62,14 +63,12 @@ for entry in "${MODELS[@]}"; do
     --batch_size "$BATCH_SIZE" \
     --max_batch_size "$MAX_BATCH_SIZE" \
     --seed "$SEED" \
-    --cache_requests true \
-    --check_integrity \
     --output_path "$out_dir" \
     --log_samples
   RESULTS+=("--result" "${name}=${out_dir}")
 done
 
-python scripts/summarize_smollm_benchmark.py \
+"$PYTHON" scripts/summarize_smollm_benchmark.py \
   "${RESULTS[@]}" \
   --candidate "$CANDIDATE" \
   --baseline smollm-135m \

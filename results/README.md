@@ -11,6 +11,8 @@ benchmark sample dumps and full run directories are excluded from Git.
   summaries.
 - [rlvr/](rlvr/): GSM8K exact-match summaries and the recorded RLVR c320
   decision.
+- [fineweb_1b/](fineweb_1b/): matched one-billion-token architecture and
+  learning-rate-schedule factorial, including the two preserved OOM cells.
 
 The canonical narrative lives in
 [../docs/project_report/TECHNICAL_REPORT.md](../docs/project_report/TECHNICAL_REPORT.md).

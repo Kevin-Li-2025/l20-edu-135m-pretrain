@@ -20,14 +20,17 @@ from transformers import AutoTokenizer
 from .data import create_source, tokenize_without_specials
 from .config import DatasetConfig
 from .quality import normalize_text, quality_filter, stable_hash
+from .provenance import artifact_record, resolve_hf_revision
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Clean, deduplicate, tokenize, and pack pretraining shards.")
     parser.add_argument("--output-dir", required=True, help="Directory containing train.bin, val.bin, metadata.json.")
     parser.add_argument("--tokenizer", default="AliceYin/l20-edu-135m")
+    parser.add_argument("--tokenizer-revision", default=None)
     parser.add_argument("--dataset", default="HuggingFaceFW/fineweb-edu")
     parser.add_argument("--config-name", default="sample-10BT")
+    parser.add_argument("--dataset-revision", default=None)
     parser.add_argument("--split", default="train")
     parser.add_argument("--text-column", default="text")
     parser.add_argument("--local-text-path", default=None)
@@ -87,10 +90,29 @@ def write_tokens(handle: Any, ids: list[int]) -> int:
     return int(array.size)
 
 
+def choose_output_split(
+    digest: str,
+    *,
+    train_tokens: int,
+    target_tokens: int,
+    val_tokens: int,
+    val_target_tokens: int,
+    val_modulus: int = 97,
+) -> str | None:
+    if val_modulus <= 1:
+        raise ValueError("val_modulus must be greater than one")
+    if val_tokens < val_target_tokens and int(digest[:8], 16) % val_modulus == 0:
+        return "val"
+    if train_tokens < target_tokens:
+        return "train"
+    return None
+
+
 def iter_examples(args: argparse.Namespace) -> Iterable[Any]:
     config = DatasetConfig(
         name=args.dataset,
         config_name=args.config_name,
+        revision=args.dataset_revision,
         split=args.split,
         streaming=True,
         text_column=args.text_column,
@@ -110,7 +132,23 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    tokenizer = AutoTokenizer.from_pretrained(args.tokenizer, use_fast=True)
+    args.tokenizer_revision = resolve_hf_revision(
+        args.tokenizer,
+        repo_type="model",
+        revision=args.tokenizer_revision,
+    )
+    if not args.local_text_path:
+        args.dataset_revision = resolve_hf_revision(
+            args.dataset,
+            repo_type="dataset",
+            revision=args.dataset_revision,
+        )
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        args.tokenizer,
+        revision=args.tokenizer_revision,
+        use_fast=True,
+    )
     eos_token_id = tokenizer.eos_token_id
     if eos_token_id is None:
         raise ValueError("Tokenizer must provide eos_token_id")
@@ -157,10 +195,20 @@ def main() -> None:
                 continue
             ids.append(int(eos_token_id))
 
-            if val_tokens < args.val_tokens and int(digest[:8], 16) % 97 == 0:
+            output_split = choose_output_split(
+                digest,
+                train_tokens=train_tokens,
+                target_tokens=args.target_tokens,
+                val_tokens=val_tokens,
+                val_target_tokens=args.val_tokens,
+            )
+            if output_split == "val":
                 val_tokens += write_tokens(val_handle, ids)
-            else:
+            elif output_split == "train":
                 train_tokens += write_tokens(train_handle, ids)
+            else:
+                counters["post_train_non_val_discard"] += 1
+                continue
             counters["kept"] += 1
 
             total_tokens = train_tokens + val_tokens
@@ -191,8 +239,10 @@ def main() -> None:
     metadata = {
         "dtype": "uint32",
         "tokenizer": args.tokenizer,
+        "tokenizer_revision": args.tokenizer_revision,
         "dataset": args.dataset,
         "config_name": args.config_name,
+        "dataset_revision": args.dataset_revision,
         "split": args.split,
         "block_size": args.block_size,
         "target_tokens": args.target_tokens,
@@ -209,6 +259,10 @@ def main() -> None:
         "counters": dict(counters),
         "elapsed_sec": time.time() - started_at,
         "hf_endpoint": os.environ.get("HF_ENDPOINT"),
+        "artifacts": {
+            train_path.name: artifact_record(train_path),
+            val_path.name: artifact_record(val_path),
+        },
     }
     with metadata_path.open("w", encoding="utf-8") as handle:
         json.dump(metadata, handle, indent=2, sort_keys=True)

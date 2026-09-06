@@ -1,0 +1,47 @@
+run_name: l20-edu-140m-wide-fineweb-pilot-50m
+output_dir: runs/l20-edu-140m-wide-fineweb-pilot-50m
+seed: 20260906
+tokenizer_name: assets/tokenizer-smollm2-135m
+
+dataset:
+  tokenized_path: data/v2_fineweb_pilot_50m
+  split: train
+  streaming: false
+  require_manifest: true
+  allow_repetition: false
+
+model:
+  block_size: 2048
+  hidden_size: 768
+  intermediate_size: 3072
+  num_hidden_layers: 12
+  num_attention_heads: 12
+  num_key_value_heads: 4
+  rope_theta: 10000.0
+  rms_norm_eps: 0.000001
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+
+trainer:
+  micro_batch_size: 6
+  gradient_accumulation_steps: 13
+  max_steps: 313
+  warmup_steps: 31
+  learning_rate: 0.0004
+  min_lr_ratio: 0.1
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  gradient_checkpointing: false
+  log_interval: 20
+  eval_interval: 313
+  eval_batches: 16
+  save_interval: 313
+  keep_last_checkpoints: 2
+  num_workers: 0
+  mfu_peak_tflops: 82.58
