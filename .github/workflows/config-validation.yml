@@ -9,6 +9,9 @@ on:
       - "pyproject.toml"
       - "scripts/check_pretrain_configs.py"
       - "scripts/check_repo_hygiene.py"
+      - "scripts/*fineweb*"
+      - "results/fineweb_recovery/**"
+      - "protocols/**"
       - "src/**"
       - "tests/**"
   push:
@@ -20,6 +23,9 @@ on:
       - "pyproject.toml"
       - "scripts/check_pretrain_configs.py"
       - "scripts/check_repo_hygiene.py"
+      - "scripts/*fineweb*"
+      - "results/fineweb_recovery/**"
+      - "protocols/**"
       - "src/**"
       - "tests/**"
 

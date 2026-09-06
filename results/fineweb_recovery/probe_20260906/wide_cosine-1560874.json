@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "scope": "memory_and_optimizer_smoke_not_quality_or_speed",
+  "config": "configs/fineweb_recovery/wide_cosine_s20260906.yaml",
+  "config_sha256": "47896c325dca4a4be57a1a3a947955246ae8aa400d392bc35a9d44f8126d86a5",
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "parameters": 141576960,
+  "seed": 20260906,
+  "tokens_per_step": 159744,
+  "steps": [
+    {
+      "step": 1,
+      "loss": 10.942889899015427,
+      "grad_norm": 4.198028087615967
+    },
+    {
+      "step": 2,
+      "loss": 10.95426458120346,
+      "grad_norm": 4.238602161407471
+    },
+    {
+      "step": 3,
+      "loss": 10.92648234963417,
+      "grad_norm": 4.479556083679199
+    }
+  ],
+  "sampled_parameters_changed": true,
+  "validation_smoke_loss": 10.9100341796875,
+  "validation_smoke_batches": 1,
+  "peak_allocated_bytes": 7440237056,
+  "peak_reserved_bytes": 8038383616,
+  "total_device_bytes": 25250627584,
+  "torch_version": "2.11.0+cu128"
+}

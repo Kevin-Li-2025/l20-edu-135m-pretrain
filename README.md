@@ -18,6 +18,11 @@ factorial remains incomplete. No downstream gain is established. Its corrected
 dense-BF16 MFU estimate is about 45.1%, not the archived 90.2% computed with
 the smaller, non-BF16-Tensor denominator.
 
+Follow-up: [memory-matched recovery probes](results/fineweb_recovery/README.md)
+passed three real optimizer updates on both architectures with microbatch 2
+and accumulation 39. The three-seed full matrix is configured but not launched;
+storage safety remains a gate. This does not change the historical quality result.
+
 ## Why This Repo Exists
 
 Most public small-language-model releases hide the parts that matter for

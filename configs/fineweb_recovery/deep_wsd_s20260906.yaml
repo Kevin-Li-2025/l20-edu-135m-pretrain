@@ -1,0 +1,46 @@
+run_name: fineweb-recovery-deep_wsd-s20260906
+output_dir: runs/fineweb-recovery-deep_wsd-s20260906
+seed: 20260906
+tokenizer_name: assets/tokenizer-smollm2-135m
+dataset:
+  tokenized_path: data/v2_fineweb_1b
+  split: train
+  streaming: false
+  require_manifest: true
+  allow_repetition: false
+model:
+  block_size: 2048
+  hidden_size: 576
+  intermediate_size: 1536
+  num_hidden_layers: 30
+  num_attention_heads: 9
+  num_key_value_heads: 3
+  rope_theta: 10000.0
+  rms_norm_eps: 1.0e-06
+  attention_dropout: 0.0
+  tie_word_embeddings: true
+  vocab_multiple: 64
+  attn_implementation: sdpa
+trainer:
+  micro_batch_size: 2
+  gradient_accumulation_steps: 39
+  max_steps: 6260
+  warmup_steps: 626
+  learning_rate: 0.0004
+  min_lr_ratio: 0.0
+  lr_schedule: wsd
+  decay_fraction: 0.2
+  weight_decay: 0.1
+  beta1: 0.9
+  beta2: 0.95
+  grad_clip: 1.0
+  dtype: bfloat16
+  compile: false
+  gradient_checkpointing: false
+  log_interval: 50
+  eval_interval: 6260
+  eval_batches: 1024
+  save_interval: 3130
+  keep_last_checkpoints: 1
+  num_workers: 0
+  mfu_peak_tflops: 165.2
