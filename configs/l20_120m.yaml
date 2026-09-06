@@ -47,7 +47,7 @@ trainer:
   compile: true
   gradient_checkpointing: false
   log_interval: 10
-  eval_interval: 500
+  eval_interval: 0
   eval_batches: 64
   save_interval: 1000
   keep_last_checkpoints: 2

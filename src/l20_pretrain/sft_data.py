@@ -210,12 +210,27 @@ def encode_sft_example(
     if not input_ids:
         return None
 
-    input_ids = input_ids[:block_size]
-    labels = labels[:block_size]
+    eos_token_id = getattr(tokenizer, "eos_token_id", None)
+    pad_token_id = getattr(tokenizer, "pad_token_id", eos_token_id)
+    if eos_token_id is None or pad_token_id is None:
+        raise ValueError("SFT encoding requires tokenizer eos_token_id and pad_token_id")
+
+    # Reserve the final non-padding position for an explicit supervised EOS.
+    # A chat-template boundary token is not necessarily the tokenizer EOS.
+    content_limit = max(block_size - 1, 0)
+    input_ids = input_ids[:content_limit]
+    labels = labels[:content_limit]
     if not any(label != IGNORE_INDEX for label in labels):
         return None
+    input_ids.append(int(eos_token_id))
+    labels.append(int(eos_token_id))
 
     attention_mask = [1] * len(input_ids)
+    padding = block_size - len(input_ids)
+    if padding > 0:
+        input_ids.extend([int(pad_token_id)] * padding)
+        attention_mask.extend([0] * padding)
+        labels.extend([IGNORE_INDEX] * padding)
 
     return {
         "input_ids": torch.tensor(input_ids, dtype=torch.long),

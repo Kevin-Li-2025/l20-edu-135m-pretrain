@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -13,6 +14,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from l20_pretrain.config import load_config
 from l20_pretrain.eval_results import compare_task, extract_primary_metrics
+
+
+COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
 def win_rate(candidate_dir: str, baseline_dir: str) -> tuple[int, int, float]:
@@ -52,10 +56,25 @@ def main() -> None:
     gate = manifest["gate"]
 
     failures: list[str] = []
-    if candidate_cfg.tokenizer_name != controlled_cfg.tokenizer_name:
+    if (
+        candidate_cfg.tokenizer_name != controlled_cfg.tokenizer_name
+        or candidate_cfg.tokenizer_revision != controlled_cfg.tokenizer_revision
+    ):
         failures.append("controlled configs use different tokenizers")
-    if candidate_cfg.dataset.name != controlled_cfg.dataset.name:
+    if (
+        candidate_cfg.dataset.name != controlled_cfg.dataset.name
+        or candidate_cfg.dataset.config_name != controlled_cfg.dataset.config_name
+        or candidate_cfg.dataset.revision != controlled_cfg.dataset.revision
+    ):
         failures.append("controlled configs use different datasets")
+    for label, revision in (
+        ("candidate tokenizer", candidate_cfg.tokenizer_revision),
+        ("controlled tokenizer", controlled_cfg.tokenizer_revision),
+        ("candidate dataset", candidate_cfg.dataset.revision),
+        ("controlled dataset", controlled_cfg.dataset.revision),
+    ):
+        if COMMIT_SHA.fullmatch(revision or "") is None:
+            failures.append(f"{label} revision is not an immutable commit SHA")
     if candidate_cfg.model.block_size != controlled_cfg.model.block_size:
         failures.append("controlled configs use different context lengths")
 

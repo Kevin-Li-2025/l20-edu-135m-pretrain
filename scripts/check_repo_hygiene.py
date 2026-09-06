@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 import argparse
-import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -69,13 +69,17 @@ REQUIRED_FILES = [
 
 
 def iter_files(root: Path) -> list[Path]:
-    files: list[Path] = []
-    for path in root.rglob("*"):
-        if ".git" in path.parts:
-            continue
-        if path.is_file():
-            files.append(path)
-    return files
+    result = subprocess.run(
+        ["git", "ls-files", "-co", "--exclude-standard", "-z"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+    return [
+        root / item.decode("utf-8")
+        for item in result.stdout.split(b"\0")
+        if item and (root / item.decode("utf-8")).is_file()
+    ]
 
 
 def is_text_candidate(path: Path) -> bool:

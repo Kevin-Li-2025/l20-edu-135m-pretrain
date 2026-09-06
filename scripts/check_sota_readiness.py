@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -15,6 +16,9 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from l20_pretrain.config import load_config
+
+
+COMMIT_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
 def module_available(name: str) -> bool:
@@ -49,13 +53,24 @@ def main() -> None:
     budget_ratio = candidate.planned_tokens / controlled.planned_tokens
 
     checks = {
-        "same_tokenizer": candidate.tokenizer_name == controlled.tokenizer_name,
+        "same_tokenizer": candidate.tokenizer_name == controlled.tokenizer_name
+        and candidate.tokenizer_revision == controlled.tokenizer_revision,
         "same_dataset": candidate.dataset.name == controlled.dataset.name
-        and candidate.dataset.config_name == controlled.dataset.config_name,
+        and candidate.dataset.config_name == controlled.dataset.config_name
+        and candidate.dataset.revision == controlled.dataset.revision,
         "same_filter": candidate.dataset.min_score == controlled.dataset.min_score
         and candidate.dataset.min_int_score == controlled.dataset.min_int_score
         and candidate.dataset.min_chars == controlled.dataset.min_chars,
         "same_context": candidate.model.block_size == controlled.model.block_size,
+        "immutable_revisions": all(
+            COMMIT_SHA.fullmatch(value or "") is not None
+            for value in (
+                candidate.tokenizer_revision,
+                controlled.tokenizer_revision,
+                candidate.dataset.revision,
+                controlled.dataset.revision,
+            )
+        ),
         "token_budget_within_tolerance": abs(budget_ratio - 1.0) <= tolerance,
         "python_deps": all(
             module_available(name)

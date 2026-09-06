@@ -3,7 +3,7 @@ from collections import Counter
 import numpy as np
 
 from l20_pretrain.prepare_mixture_shards import SourceSpec, copy_tokenized_replay_source
-from l20_pretrain.prepare_shards import passes_dataset_score
+from l20_pretrain.prepare_shards import choose_output_split, passes_dataset_score
 from l20_pretrain.quality import normalize_code_text
 
 
@@ -59,3 +59,20 @@ def test_passes_dataset_score_reads_nested_metadata() -> None:
     assert passes_dataset_score(example, min_score=4.0, min_int_score=4)
     assert not passes_dataset_score(example, min_score=4.5, min_int_score=4)
     assert not passes_dataset_score(example, min_score=4.0, min_int_score=5)
+
+
+def test_prepare_shards_does_not_overshoot_train_while_waiting_for_validation() -> None:
+    assert choose_output_split(
+        "00000001",
+        train_tokens=100,
+        target_tokens=100,
+        val_tokens=5,
+        val_target_tokens=10,
+    ) is None
+    assert choose_output_split(
+        "00000000",
+        train_tokens=100,
+        target_tokens=100,
+        val_tokens=5,
+        val_target_tokens=10,
+    ) == "val"

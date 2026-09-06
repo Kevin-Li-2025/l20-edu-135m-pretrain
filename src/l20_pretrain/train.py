@@ -22,7 +22,7 @@ set_default_hf_home()
 
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
-from .config import PretrainConfig, load_config, save_config
+from .config import DatasetConfig, PretrainConfig, load_config, save_config
 from .data import collate_batch, create_packed_dataset
 from .modeling import build_model, count_parameters
 
@@ -41,6 +41,73 @@ def set_seed(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+def capture_rng_state() -> dict[str, Any]:
+    state: dict[str, Any] = {
+        "python": random.getstate(),
+        "numpy": np.random.get_state(),
+        "torch_cpu": torch.get_rng_state(),
+    }
+    if torch.cuda.is_available():
+        state["torch_cuda"] = torch.cuda.get_rng_state_all()
+    return state
+
+
+def restore_rng_state(state: dict[str, Any]) -> None:
+    required = {"python", "numpy", "torch_cpu"}
+    missing = sorted(required - state.keys())
+    if missing:
+        raise RuntimeError(f"checkpoint RNG state is incomplete; missing: {', '.join(missing)}")
+    random.setstate(state["python"])
+    np.random.set_state(state["numpy"])
+    torch.set_rng_state(state["torch_cpu"])
+    if torch.cuda.is_available():
+        if "torch_cuda" not in state:
+            raise RuntimeError("CUDA resume requires saved torch_cuda RNG state")
+        torch.cuda.set_rng_state_all(state["torch_cuda"])
+
+
+def restore_trainer_state(
+    state_path: str | Path,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LambdaLR,
+    config: PretrainConfig,
+) -> tuple[int, int]:
+    state_path = Path(state_path)
+    if not state_path.exists():
+        raise FileNotFoundError(
+            f"exact resume requires trainer state, but it is missing: {state_path}"
+        )
+    if not config.dataset.tokenized_path:
+        raise RuntimeError(
+            "exact resume from streaming or raw text is unsupported; "
+            "prepare immutable tokenized shards and resume from those"
+        )
+    state = torch.load(state_path, map_location="cpu", weights_only=False)
+    required = {"optimizer", "scheduler", "step", "rng_state", "consumed_train_blocks"}
+    missing = sorted(required - state.keys())
+    if missing:
+        raise RuntimeError(
+            "legacy checkpoint cannot be resumed exactly; missing trainer state: "
+            + ", ".join(missing)
+        )
+    start_step = int(state["step"])
+    consumed_train_blocks = int(state["consumed_train_blocks"])
+    expected_blocks = (
+        start_step
+        * config.trainer.gradient_accumulation_steps
+        * config.trainer.micro_batch_size
+    )
+    if consumed_train_blocks != expected_blocks:
+        raise RuntimeError(
+            "resume configuration changes the consumed-block schedule: "
+            f"checkpoint={consumed_train_blocks}, config_expected={expected_blocks}"
+        )
+    optimizer.load_state_dict(state["optimizer"])
+    scheduler.load_state_dict(state["scheduler"])
+    restore_rng_state(state["rng_state"])
+    return start_step, consumed_train_blocks
 
 
 def get_device(name: str | None) -> torch.device:
@@ -88,8 +155,10 @@ def make_optimizer(model: torch.nn.Module, config: PretrainConfig, device: torch
         "lr": config.trainer.learning_rate,
         "betas": (config.trainer.beta1, config.trainer.beta2),
     }
-    if device.type == "cuda":
+    if device.type == "cuda" and not config.trainer.deterministic:
         kwargs["fused"] = True
+    elif device.type == "cuda":
+        kwargs["foreach"] = False
     try:
         return torch.optim.AdamW(groups, **kwargs)
     except TypeError:
@@ -97,37 +166,106 @@ def make_optimizer(model: torch.nn.Module, config: PretrainConfig, device: torch
         return torch.optim.AdamW(groups, **kwargs)
 
 
-def make_scheduler(optimizer: torch.optim.Optimizer, config: PretrainConfig) -> torch.optim.lr_scheduler.LambdaLR:
+def learning_rate_multiplier(step: int, config: PretrainConfig) -> float:
     warmup = max(1, config.trainer.warmup_steps)
     total = max(warmup + 1, config.trainer.max_steps)
     min_ratio = config.trainer.min_lr_ratio
+    if step < warmup:
+        return float(step + 1) / float(warmup)
+    if config.trainer.lr_schedule == "wsd":
+        decay_steps = max(1, int(math.ceil(total * config.trainer.decay_fraction)))
+        decay_start = max(warmup, total - decay_steps)
+        if step <= decay_start:
+            return 1.0
+        progress = min(1.0, float(step - decay_start) / float(total - decay_start))
+        return 1.0 - (1.0 - min_ratio) * progress
+    progress = min(1.0, float(step - warmup) / float(total - warmup))
+    cosine = 0.5 * (1.0 + math.cos(math.pi * progress))
+    return min_ratio + (1.0 - min_ratio) * cosine
 
-    def lr_lambda(step: int) -> float:
-        if step < warmup:
-            return float(step + 1) / float(warmup)
-        progress = min(1.0, float(step - warmup) / float(total - warmup))
-        cosine = 0.5 * (1.0 + math.cos(math.pi * progress))
-        return min_ratio + (1.0 - min_ratio) * cosine
 
-    return torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+def make_scheduler(optimizer: torch.optim.Optimizer, config: PretrainConfig) -> torch.optim.lr_scheduler.LambdaLR:
+    return torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lambda step: learning_rate_multiplier(step, config),
+    )
 
 
-def build_loader(config: PretrainConfig, tokenizer: Any, *, split: str | None = None) -> DataLoader:
-    dataset_config = config.dataset
-    if split is not None:
-        dataset_config = replace(config.dataset, split=split)
+def build_loader(
+    config: PretrainConfig,
+    tokenizer: Any,
+    *,
+    dataset_config: DatasetConfig | None = None,
+    start_block_offset: int = 0,
+) -> DataLoader:
+    dataset_config = dataset_config or config.dataset
     dataset = create_packed_dataset(
         dataset_config,
         tokenizer,
         block_size=config.model.block_size,
+        seed=config.seed,
+        start_block_offset=start_block_offset,
     )
+    if start_block_offset and config.trainer.num_workers > 0:
+        raise ValueError("Exact data resume requires trainer.num_workers=0")
+    loader_generator = torch.Generator()
+    loader_generator.manual_seed(config.seed)
     return DataLoader(
         dataset,
         batch_size=config.trainer.micro_batch_size,
         collate_fn=collate_batch,
         num_workers=config.trainer.num_workers,
         pin_memory=torch.cuda.is_available(),
+        generator=loader_generator,
     )
+
+
+def evaluation_dataset_config(config: PretrainConfig) -> DatasetConfig:
+    if config.eval_dataset is not None:
+        return config.eval_dataset
+    if config.dataset.tokenized_path:
+        return replace(config.dataset, split="val")
+    raise RuntimeError(
+        "formal validation requires an explicit eval_dataset for streaming or text data"
+    )
+
+
+def preflight_validation_data(config: PretrainConfig, tokenizer: Any) -> None:
+    """Resolve validation data before model allocation or optimizer setup."""
+
+    if config.trainer.eval_interval <= 0:
+        return
+    create_packed_dataset(
+        evaluation_dataset_config(config),
+        tokenizer,
+        block_size=config.model.block_size,
+    )
+
+
+def preflight_training_data(config: PretrainConfig, tokenizer: Any) -> None:
+    """Reject accidental epoch rollover before allocating the model."""
+
+    if config.dataset.allow_repetition:
+        return
+    dataset = create_packed_dataset(
+        config.dataset,
+        tokenizer,
+        block_size=config.model.block_size,
+        seed=config.seed,
+    )
+    available_blocks = getattr(dataset, "num_blocks", None)
+    if available_blocks is None:
+        raise RuntimeError("allow_repetition=false requires finite tokenized shards")
+    required_blocks = (
+        config.trainer.max_steps
+        * config.trainer.gradient_accumulation_steps
+        * config.trainer.micro_batch_size
+    )
+    if required_blocks > available_blocks:
+        raise RuntimeError(
+            "training plan would repeat tokenized data: "
+            f"required_blocks={required_blocks}, available_blocks={available_blocks}"
+        )
 
 
 def move_batch(batch: dict[str, torch.Tensor], device: torch.device) -> dict[str, torch.Tensor]:
@@ -145,6 +283,7 @@ def save_checkpoint(
     scheduler: torch.optim.lr_scheduler.LambdaLR,
     config: PretrainConfig,
     step: int,
+    consumed_train_blocks: int,
 ) -> Path:
     checkpoint_dir = Path(config.output_dir) / f"step-{step:06d}"
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
@@ -156,6 +295,8 @@ def save_checkpoint(
             "step": step,
             "optimizer": optimizer.state_dict(),
             "scheduler": scheduler.state_dict(),
+            "rng_state": capture_rng_state(),
+            "consumed_train_blocks": consumed_train_blocks,
         },
         checkpoint_dir / "trainer_state.pt",
     )
@@ -191,7 +332,11 @@ def update_checkpoint_pointer(output_dir: str | Path, checkpoint_dir: Path, name
 
 
 def load_tokenizer(config: PretrainConfig) -> Any:
-    tokenizer = AutoTokenizer.from_pretrained(config.tokenizer_name, use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        config.tokenizer_name,
+        revision=config.tokenizer_revision,
+        use_fast=True,
+    )
     if tokenizer.pad_token_id is None and tokenizer.eos_token is not None:
         tokenizer.pad_token = tokenizer.eos_token
     return tokenizer
@@ -247,13 +392,17 @@ def configure_pretrained_model_config(config: PretrainConfig, model_name_or_path
 
 
 def load_or_create_model(config: PretrainConfig, tokenizer: Any, resume: str | None, dtype: torch.dtype) -> torch.nn.Module:
-    load_kwargs: dict[str, Any] = {"torch_dtype": dtype}
+    load_kwargs: dict[str, Any] = {}
     if config.model.attn_implementation:
         load_kwargs["attn_implementation"] = config.model.attn_implementation
     if resume:
+        # A resume must preserve the checkpoint's parameter dtype. Casting an
+        # FP32 checkpoint to the BF16 autocast dtype changes the next update and
+        # silently breaks exact continuation.
         load_kwargs["config"] = configure_pretrained_model_config(config, resume)
         return AutoModelForCausalLM.from_pretrained(resume, **load_kwargs)
     if config.init_model_name_or_path:
+        load_kwargs["dtype"] = dtype
         load_kwargs["config"] = configure_pretrained_model_config(config, config.init_model_name_or_path)
         return AutoModelForCausalLM.from_pretrained(config.init_model_name_or_path, **load_kwargs)
     return build_model(config.model, tokenizer)
@@ -292,8 +441,11 @@ def evaluate(
     dtype: torch.dtype,
 ) -> float:
     model.eval()
-    split = "val" if config.dataset.tokenized_path else None
-    loader = build_loader(config, tokenizer, split=split)
+    loader = build_loader(
+        config,
+        tokenizer,
+        dataset_config=evaluation_dataset_config(config),
+    )
     iterator = iter(loader)
     losses: list[float] = []
     for _ in range(config.trainer.eval_batches):
@@ -320,15 +472,24 @@ def main() -> None:
     device = get_device(args.device)
     dtype = get_dtype(config.trainer.dtype)
     if device.type == "cuda":
-        torch.set_float32_matmul_precision("high")
-        torch.backends.cuda.matmul.allow_tf32 = True
-        torch.backends.cudnn.allow_tf32 = True
-        torch.backends.cuda.enable_flash_sdp(True)
-        torch.backends.cuda.enable_mem_efficient_sdp(True)
+        if config.trainer.deterministic:
+            torch.use_deterministic_algorithms(True)
+            torch.backends.cuda.matmul.allow_tf32 = False
+            torch.backends.cudnn.allow_tf32 = False
+            torch.backends.cuda.enable_flash_sdp(False)
+            torch.backends.cuda.enable_mem_efficient_sdp(False)
+        else:
+            torch.set_float32_matmul_precision("high")
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+            torch.backends.cuda.enable_flash_sdp(True)
+            torch.backends.cuda.enable_mem_efficient_sdp(True)
         torch.backends.cuda.enable_math_sdp(True)
 
     liger_applied = maybe_apply_liger_kernel(config)
     tokenizer = load_tokenizer(config)
+    preflight_training_data(config, tokenizer)
+    preflight_validation_data(config, tokenizer)
     model = load_or_create_model(config, tokenizer, args.resume, dtype)
     if getattr(model.config, "max_position_embeddings", 0) < config.model.block_size:
         model.config.max_position_embeddings = config.model.block_size
@@ -342,15 +503,20 @@ def main() -> None:
     optimizer = make_optimizer(model, config, device)
     scheduler = make_scheduler(optimizer, config)
     start_step = 0
+    consumed_train_blocks = 0
     if args.resume:
-        state_path = Path(args.resume) / "trainer_state.pt"
-        if state_path.exists():
-            state = torch.load(state_path, map_location="cpu")
-            optimizer.load_state_dict(state["optimizer"])
-            scheduler.load_state_dict(state["scheduler"])
-            start_step = int(state["step"])
+        start_step, consumed_train_blocks = restore_trainer_state(
+            Path(args.resume) / "trainer_state.pt",
+            optimizer,
+            scheduler,
+            config,
+        )
 
-    loader = build_loader(config, tokenizer)
+    loader = build_loader(
+        config,
+        tokenizer,
+        start_block_offset=consumed_train_blocks,
+    )
     iterator = iter(loader)
     model.train()
     parameter_count = count_parameters(unwrap_model(model))
@@ -363,9 +529,11 @@ def main() -> None:
                 "run_name": config.run_name,
                 "device": str(device),
                 "dtype": config.trainer.dtype,
+                "deterministic": config.trainer.deterministic,
                 "parameters": parameter_count,
                 "tokens_per_step": config.tokens_per_step,
                 "planned_tokens": config.planned_tokens,
+                "lr_schedule": config.trainer.lr_schedule,
                 "start_step": start_step,
                 "init_model_name_or_path": config.init_model_name_or_path,
                 "block_size": config.model.block_size,
@@ -401,6 +569,9 @@ def main() -> None:
             torch.nn.utils.clip_grad_norm_(model.parameters(), config.trainer.grad_clip)
         optimizer.step()
         scheduler.step()
+        consumed_train_blocks += (
+            config.trainer.gradient_accumulation_steps * config.trainer.micro_batch_size
+        )
 
         if step % config.trainer.log_interval == 0 or step == 1:
             now = time.time()
@@ -448,7 +619,15 @@ def main() -> None:
             )
 
         if config.trainer.save_interval > 0 and step % config.trainer.save_interval == 0:
-            checkpoint_dir = save_checkpoint(model, tokenizer, optimizer, scheduler, config, step)
+            checkpoint_dir = save_checkpoint(
+                model,
+                tokenizer,
+                optimizer,
+                scheduler,
+                config,
+                step,
+                consumed_train_blocks,
+            )
             update_checkpoint_pointer(config.output_dir, checkpoint_dir)
             prune_checkpoints(config.output_dir, config.trainer.keep_last_checkpoints)
             print(
@@ -459,7 +638,15 @@ def main() -> None:
                 flush=True,
             )
 
-    checkpoint_dir = save_checkpoint(model, tokenizer, optimizer, scheduler, config, config.trainer.max_steps)
+    checkpoint_dir = save_checkpoint(
+        model,
+        tokenizer,
+        optimizer,
+        scheduler,
+        config,
+        config.trainer.max_steps,
+        consumed_train_blocks,
+    )
     update_checkpoint_pointer(config.output_dir, checkpoint_dir)
     prune_checkpoints(config.output_dir, config.trainer.keep_last_checkpoints)
     print(
